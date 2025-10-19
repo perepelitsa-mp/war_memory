@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --noise-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    --shadow-soft: 0px 24px 60px -32px rgba(12, 12, 14, 0.45);
+    --shadow-glow: 0 0 40px rgba(244, 185, 90, 0.45);
+    --border-strength: 0.75px;
+    --radius: 0.65rem;
+    --transition-theme: 280ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .theme-day {
+    color-scheme: light;
+    --background: 42 39% 94%;
+    --foreground: 0 0% 11%;
+
+    --background-soft: 37 32% 91%;
+    --surface: 35 30% 97%;
+    --surface-foreground: 25 15% 25%;
+
+    --card: 35 31% 98%;
+    --card-foreground: 0 0% 11%;
+
+    --popover: 35 31% 98%;
+    --popover-foreground: 0 0% 11%;
+
+    --primary: 25 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 31% 26%;
+    --secondary-foreground: 42 39% 94%;
+
+    --accent: 20 59% 45%;
+    --accent-foreground: 42 39% 94%;
+
+    --muted: 44 27% 82%;
+    --muted-foreground: 0 0% 22%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 42 39% 94%;
+
+    --border: 36 26% 80%;
+    --input: 36 26% 80%;
+    --ring: 25 100% 50%;
+
+    --glow: 37 88% 65%;
+  }
+
+  .theme-night {
+    color-scheme: dark;
+    --background: 212 37% 8%;
+    --foreground: 225 10% 92%;
+
+    --background-soft: 211 40% 11%;
+    --surface: 214 31% 15%;
+    --surface-foreground: 225 14% 88%;
+
+    --card: 211 40% 11%;
+    --card-foreground: 225 14% 88%;
+
+    --popover: 212 37% 8%;
+    --popover-foreground: 225 14% 88%;
+
+    --primary: 25 100% 50%;
+    --primary-foreground: 225 14% 88%;
+
+    --secondary: 214 30% 50%;
+    --secondary-foreground: 212 37% 8%;
+
+    --accent: 37 88% 65%;
+    --accent-foreground: 212 37% 8%;
+
+    --muted: 214 17% 27%;
+    --muted-foreground: 225 20% 85%;
+
+    --destructive: 357 74% 52%;
+    --destructive-foreground: 212 37% 8%;
+
+    --border: 213 27% 23%;
+    --input: 213 27% 23%;
+    --ring: 37 88% 65%;
+
+    --glow: 37 88% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image: var(--noise-image);
+    background-attachment: fixed;
+    transition:
+      background-color var(--transition-theme),
+      color var(--transition-theme);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    background-image:
+      radial-gradient(circle at 10% 10%, hsl(var(--glow) / 0.28), transparent 55%),
+      radial-gradient(circle at 85% 90%, hsl(var(--primary) / 0.22), transparent 50%);
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.35);
+  }
+}
+
+@layer components {
+  /* Георгиевская лента как декоративный фон */
+  .ribbon-pattern {
+    background: repeating-linear-gradient(
+      45deg,
+      #1A1A1A,
+      #1A1A1A 10px,
+      #FF7F00 10px,
+      #FF7F00 20px,
+      #1A1A1A 20px,
+      #1A1A1A 30px
+    );
+  }
+
+  /* Типографика для длинных рассказов памяти */
+  .prose-memorial {
+    @apply prose prose-lg max-w-none;
+    @apply prose-headings:font-serif prose-headings:text-ribbon-black;
+    @apply prose-p:text-foreground/80 prose-p:leading-relaxed;
+    @apply prose-a:text-primary prose-a:no-underline hover:prose-a:underline;
+    @apply prose-strong:text-foreground prose-blockquote:border-primary/40;
+  }
+
+  /* Карточка памяти с мягким свечением */
+  .memorial-card {
+    @apply rounded-2xl border border-border/60 bg-card/90 backdrop-blur-sm;
+    box-shadow: var(--shadow-soft);
+    transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  }
+
+  .memorial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-glow);
+    border-color: hsl(var(--primary) / 0.55);
+  }
+
+  /* Бейдж активного демо */
+  .demo-badge {
+    @apply inline-flex items-center px-2 py-1 text-xs font-bold;
+    @apply bg-demo text-white rounded;
+    @apply animate-pulse;
+  }
+
+  /* Текстура стеклянных панелей */
+  .glass-panel {
+    @apply border border-white/10 bg-white/10;
+    backdrop-filter: blur(18px);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-ribbon-gradient {
+    background: linear-gradient(135deg, #1A1A1A 25%, #FF7F00 25%, #FF7F00 50%, #1A1A1A 50%, #1A1A1A 75%, #FF7F00 75%, #FF7F00);
+    background-size: 40px 40px;
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .scrollbar-soft {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--foreground) / 0.25) transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-soft::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--foreground) / 0.25);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-soft:hover::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--foreground) / 0.35);
+  }
+}

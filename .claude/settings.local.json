@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec supabase_db_war_memory psql -U postgres -d postgres -c \"SELECT COUNT(*) FROM timeline_items WHERE NOT is_deleted;\")",
+      "Bash(docker exec supabase_db_war_memory psql -U postgres -d postgres -c \"SELECT COUNT(*) FROM comments WHERE NOT is_deleted;\")",
+      "Bash(curl -s \"http://localhost:3004/fallen/10000000-0000-0000-0000-000000000001\")",
+      "Bash(docker exec supabase_db_war_memory psql -U postgres -d postgres -c \"SELECT COUNT(*) FROM timeline_items WHERE fallen_id = ''10000000-0000-0000-0000-000000000001'' AND status = ''approved'' AND NOT is_deleted;\")",
+      "Bash(docker exec supabase_db_war_memory psql -U postgres -d postgres -c \"SELECT COUNT(*) FROM comments WHERE fallen_id = ''10000000-0000-0000-0000-000000000001'' AND NOT is_deleted AND NOT is_hidden;\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

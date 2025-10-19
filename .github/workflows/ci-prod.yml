@@ -1,0 +1,81 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
+
+            echo "==================================="
+            echo "Deploying to Production"
+            echo "==================================="
+
+            # Navigate to project directory
+            cd /opt/war_memory
+
+            # Pull latest code
+            echo "Pulling latest code from main..."
+            git pull origin main
+
+            # Stop containers
+            echo "Stopping containers..."
+            docker-compose --env-file .env.production --profile prod down
+
+            # Build and start containers
+            echo "Starting containers..."
+            docker-compose --env-file .env.production --profile prod up -d --build
+
+            # Wait for PostgreSQL to be ready
+            echo "Waiting for PostgreSQL..."
+            sleep 10
+
+            # Check container health
+            echo "Checking container health..."
+            docker-compose --env-file .env.production ps
+
+            echo "==================================="
+            echo "Deployment completed successfully!"
+            echo "==================================="
+          ENDSSH
+
+      - name: Health check
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          sleep 15
+          curl -f $SITE_URL/health || exit 1
+          echo "✓ Health check passed"
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Deployment to production successful"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment to production failed"
