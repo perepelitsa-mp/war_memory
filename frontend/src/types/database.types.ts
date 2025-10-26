@@ -143,7 +143,9 @@ export interface Database {
       comments: {
         Row: {
           id: string
-          fallen_id: string
+          fallen_id: string | null
+          memory_item_id: string | null
+          memory_addition_id: string | null
           parent_id: string | null
           content: string
           author_id: string
@@ -159,6 +161,26 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['comments']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['comments']['Insert']>
+      }
+      memory_additions: {
+        Row: {
+          id: string
+          memory_item_id: string
+          content_md: string
+          media_ids: string[] | null
+          status: 'pending' | 'approved' | 'rejected' | 'archived'
+          moderated_by: string | null
+          moderated_at: string | null
+          moderation_note: string | null
+          created_by: string
+          is_deleted: boolean
+          deleted_at: string | null
+          deleted_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['memory_additions']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['memory_additions']['Insert']>
       }
       locations: {
         Row: {
@@ -180,6 +202,43 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['locations']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['locations']['Insert']>
+      }
+      awards: {
+        Row: {
+          id: string
+          name: string
+          short_name: string | null
+          award_type: 'medal' | 'order' | 'title' | 'badge'
+          image_url: string
+          description: string | null
+          status: 'active' | 'archived' | 'historical'
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['awards']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['awards']['Insert']>
+      }
+      fallen_awards: {
+        Row: {
+          id: string
+          fallen_id: string
+          award_id: string
+          citation: string | null
+          awarded_date: string | null
+          decree_number: string | null
+          status: 'pending' | 'approved' | 'rejected'
+          moderated_by: string | null
+          moderated_at: string | null
+          created_by: string
+          is_deleted: boolean
+          deleted_at: string | null
+          deleted_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['fallen_awards']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['fallen_awards']['Insert']>
       }
     }
     Views: {}

@@ -5,6 +5,34 @@
 -- Описание: Добавление демо-карточек с правильной кодировкой UTF-8
 -- Дата: 2025-01-19
 
+-- Создаем демо-пользователей, если их еще нет
+INSERT INTO users (
+  id,
+  email,
+  full_name,
+  role,
+  email_verified,
+  is_deleted
+)
+VALUES
+  (
+    '00000000-0000-0000-0000-000000000001',
+    'demo1@war-memory.local',
+    'Демо Пользователь 1',
+    'user',
+    true,
+    false
+  ),
+  (
+    '00000000-0000-0000-0000-000000000002',
+    'demo2@war-memory.local',
+    'Демо Пользователь 2',
+    'user',
+    true,
+    false
+  )
+ON CONFLICT (id) DO NOTHING;
+
 -- Вставка дополнительных карточек погибших
 INSERT INTO fallen (
   id,

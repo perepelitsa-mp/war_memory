@@ -114,7 +114,7 @@ export default async function HomePage() {
             сохранить историю героя и передать её будущим поколениям.
           </p>
           <a
-            href="/fallen/new"
+            href="/fallen/create"
             className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-8 text-sm font-semibold uppercase tracking-[0.2em] text-primary-foreground shadow-glow ring-offset-background transition-all hover:-translate-y-0.5 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Создать карточку героя

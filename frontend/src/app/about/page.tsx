@@ -129,7 +129,7 @@ export default function AboutPage() {
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button size="lg" className="gap-2" asChild>
-                  <Link href="/fallen/new">Создать карточку памяти</Link>
+                  <Link href="/fallen/create">Создать карточку памяти</Link>
                 </Button>
                 <Button
                   size="lg"
@@ -188,7 +188,7 @@ export default function AboutPage() {
               <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Что вы можете сделать</p>
               <h2 className="font-serif text-3xl font-semibold text-foreground md:text-4xl">Пути участия</h2>
             </div>
-            <Link href="/fallen/new" className="text-sm font-medium text-primary hover:text-primary/80">
+            <Link href="/fallen/create" className="text-sm font-medium text-primary hover:text-primary/80">
               Присоединиться к сообществу
             </Link>
           </div>

@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Award, CalendarDays, Flame, MapPin, MessageCircle, Shield } from 'lucide-react'
+import { Award as AwardIcon, CalendarDays, Flame, MapPin, MessageCircle, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getFullName } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -10,12 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Markdown } from '@/components/ui/markdown'
 import { TimelineWithForm } from '@/components/fallen/TimelineWithForm'
 import { MemoryGallery } from '@/components/fallen/MemoryGallery'
+import { MemoryBoard } from '@/components/fallen/MemoryBoard'
+import { AwardsSection } from '@/components/fallen/AwardsSection'
 import { Comments } from '@/components/fallen/Comments'
 import type {
+  Award,
   CommentWithAuthor,
   Fallen,
   MemoryItem,
+  MemoryItemWithDetails,
+  MemoryAddition,
   TimelineItem,
+  FallenAwardWithDetails,
 } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -93,6 +99,37 @@ export default async function FallenDetailPage({ params }: PageProps) {
     .eq('is_deleted', false)
     .order('created_at', { ascending: false })
 
+  // Загрузка воспоминаний с полной детализацией для доски памяти
+  const { data: memoryItemsDetailed } = await supabase
+    .from('memory_items')
+    .select(
+      `
+      *,
+      author:users!memory_items_created_by_fkey(id, full_name, avatar_url)
+    `,
+    )
+    .eq('fallen_id', id)
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  // Загрузка дополнений к воспоминаниям
+  const memoryIds = (memoryItemsDetailed || []).map((m: any) => m.id)
+  const { data: memoryAdditions } = memoryIds.length > 0
+    ? await supabase
+        .from('memory_additions')
+        .select(
+          `
+          *,
+          author:users!memory_additions_created_by_fkey(id, full_name, avatar_url)
+        `,
+        )
+        .in('memory_item_id', memoryIds)
+        .eq('status', 'approved')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+    : { data: [] as any[] }
+
   const { data: comments } = await supabase
     .from('comments')
     .select(
@@ -105,6 +142,58 @@ export default async function FallenDetailPage({ params }: PageProps) {
     .eq('is_deleted', false)
     .eq('is_hidden', false)
     .order('created_at', { ascending: true })
+
+  // Загрузка комментариев к воспоминаниям и дополнениям
+  const additionIds = (memoryAdditions || []).map((a: any) => a.id)
+  const allEntityIds = [...memoryIds, ...additionIds]
+  const { data: memoryComments } = allEntityIds.length > 0
+    ? await supabase
+        .from('comments')
+        .select(
+          `
+          *,
+          author:users!comments_author_id_fkey(id, full_name, avatar_url)
+        `,
+        )
+        .or(
+          memoryIds.length > 0 && additionIds.length > 0
+            ? `memory_item_id.in.(${memoryIds.join(',')}),memory_addition_id.in.(${additionIds.join(',')})`
+            : memoryIds.length > 0
+              ? `memory_item_id.in.(${memoryIds.join(',')})`
+              : `memory_addition_id.in.(${additionIds.join(',')})`,
+        )
+        .eq('is_deleted', false)
+        .eq('is_hidden', false)
+        .order('created_at', { ascending: true })
+    : { data: [] as any[] }
+
+  // Загрузка наград героя
+  const { data: fallenAwardsData } = await supabase
+    .from('fallen_awards')
+    .select(`
+      *,
+      award:awards(*)
+    `)
+    .eq('fallen_id', id)
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  const fallenAwards: FallenAwardWithDetails[] = (fallenAwardsData || [])
+    .filter((fa) => fa.award)
+    .map((fa) => ({
+      ...fa,
+      award: fa.award as Award,
+    }))
+    .sort((a, b) => (b.award.sort_order || 0) - (a.award.sort_order || 0))
+
+  // Загрузка всех доступных наград для выбора
+  const { data: allAwardsData } = await supabase
+    .from('awards')
+    .select('*')
+    .order('sort_order', { ascending: false })
+
+  const availableAwards: Award[] = allAwardsData || []
 
   const buildCommentsTree = (flatComments: CommentWithAuthor[] = []): CommentRecord[] => {
     const map = new Map<string, CommentRecord>()
@@ -133,6 +222,35 @@ export default async function FallenDetailPage({ params }: PageProps) {
   const timeline = (timelineItems || []) as TimelineItem[]
   const memories = (memoryItems || []) as MemoryItem[]
   const commentsTree = buildCommentsTree(comments || [])
+
+  // Построение структуры данных для доски памяти
+  const memoriesWithDetails: MemoryItemWithDetails[] = (memoryItemsDetailed || []).map(
+    (memory: any) => {
+      const memoryAdditionsForItem = (memoryAdditions || [])
+        .filter((add: any) => add.memory_item_id === memory.id)
+        .map((add: any) => {
+          const additionComments = (memoryComments || [])
+            .filter((c: any) => c.memory_addition_id === add.id)
+            .map((c: any) => c as CommentWithAuthor)
+          return {
+            ...add,
+            comments: buildCommentsTree(additionComments),
+            media: [], // TODO: загрузка медиа для дополнений
+          }
+        })
+
+      const itemComments = (memoryComments || [])
+        .filter((c: any) => c.memory_item_id === memory.id)
+        .map((c: any) => c as CommentWithAuthor)
+
+      return {
+        ...memory,
+        additions: memoryAdditionsForItem,
+        comments: buildCommentsTree(itemComments),
+        media: [], // TODO: загрузка медиа для воспоминаний
+      } as MemoryItemWithDetails
+    },
+  )
 
   const stats = [
     {
@@ -166,7 +284,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
     {
       label: 'Подразделение',
       value: fallData.military_unit,
-      icon: Award,
+      icon: AwardIcon,
     },
     {
       label: 'Позывной',
@@ -314,6 +432,13 @@ export default async function FallenDetailPage({ params }: PageProps) {
         </div>
       </section>
 
+      {/* Секция наград - показываем всегда, чтобы была доступна кнопка добавления */}
+      <AwardsSection
+        awards={fallenAwards}
+        fallenId={id}
+        availableAwards={availableAwards}
+      />
+
       {fallData.memorial_text && (
         <section className="grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
           <Card className="border border-border/50 bg-background/70 shadow-soft">
@@ -373,6 +498,10 @@ export default async function FallenDetailPage({ params }: PageProps) {
             <MemoryGallery items={memories} />
           </CardContent>
         </Card>
+      </section>
+
+      <section>
+        <MemoryBoard memories={memoriesWithDetails} fallenId={id} />
       </section>
 
       <section id="comments">

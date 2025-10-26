@@ -8,7 +8,9 @@ VALUES
   ('00000000-0000-0000-0000-000000000001', '+79999999991', 'Администратор Системы', 'admin@localhost', 'admin', '{"email": true, "telegram": true}', NOW()),
   ('00000000-0000-0000-0000-000000000002', '+79999999992', 'Иванова Мария Петровна', 'maria@localhost', 'user', '{"email": true, "telegram": true}', NOW()),
   ('00000000-0000-0000-0000-000000000003', '+79999999993', 'Сидоров Пётр Иванович', 'petr@localhost', 'user', '{"email": false, "telegram": true}', NOW()),
-  ('00000000-0000-0000-0000-000000000004', '+79999999994', 'Петрова Анна Сергеевна', 'anna@localhost', 'user', '{"email": true, "telegram": false}', NOW())
+  ('00000000-0000-0000-0000-000000000004', '+79999999994', 'Петрова Анна Сергеевна', 'anna@localhost', 'user', '{"email": true, "telegram": false}', NOW()),
+  ('00000000-0000-0000-0000-000000000005', '+79999999995', 'Демо Пользователь 5', 'demo5@localhost', 'user', '{"email": true, "telegram": false}', NOW()),
+  ('00000000-0000-0000-0000-000000000006', '+79999999996', 'Демо Пользователь 6', 'demo6@localhost', 'user', '{"email": true, "telegram": false}', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Пример карточек памяти

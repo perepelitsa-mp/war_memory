@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
-import { Flame, Menu } from 'lucide-react';
+import { Flame, Menu, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
+import { AuthButton } from '@/components/auth/AuthButton';
+import { useHasRole } from '@/hooks/useAdminAuth';
+import { Badge } from '@/components/ui/badge';
 
 const navItems = [
   { href: '/', label: 'Главная' },
@@ -27,6 +30,7 @@ export function Header() {
   const progressScale = useTransform(progress, [0, 1], [0, 1]);
   const shadowOpacity = useTransform(progress, [0, 0.2], [0, 0.15]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { hasRole } = useHasRole(['superadmin', 'admin', 'moderator']);
 
   return (
     <motion.header
@@ -81,6 +85,29 @@ export function Header() {
                 </Link>
               );
             })}
+            {/* {hasRole && (
+              <Link
+                href="/admin/moderation"
+                className={cn(
+                  'relative flex items-center gap-2 text-sm font-medium transition-colors duration-300 hover:text-foreground',
+                  pathname.startsWith('/admin/moderation')
+                    ? 'text-foreground'
+                    : 'text-foreground/60',
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                <span className="relative inline-flex items-center">
+                  Модерация
+                  {pathname.startsWith('/admin/moderation') && (
+                    <motion.span
+                      layoutId="nav-pill"
+                      className="absolute -bottom-2 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary via-accent to-glow shadow-glow"
+                      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+                    />
+                  )}
+                </span>
+              </Link>
+            )} */}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -95,15 +122,26 @@ export function Header() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="sm" className="hidden md:flex" asChild>
-              <Link href="/login">Войти</Link>
-            </Button>
+            <AuthButton variant="ghost" size="sm" className="hidden md:flex" />
+            {hasRole && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="hidden gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 md:inline-flex"
+                asChild
+              >
+                <Link href="/admin/moderation">
+                  <Shield className="h-4 w-4" />
+                  Модерация
+                </Link>
+              </Button>
+            )}
             <Button
               size="sm"
               className="hidden shadow-glow transition hover:-translate-y-0.5 md:inline-flex"
               asChild
             >
-              <Link href="/fallen/new">Добавить историю</Link>
+              <Link href="/fallen/create">Добавить историю</Link>
             </Button>
           </div>
         </div>
@@ -154,18 +192,55 @@ export function Header() {
               </Link>
             );
           })}
+          {hasRole && (
+            <Link
+              href="/admin/moderation"
+              className={cn(
+                'flex items-center justify-between rounded-xl border border-border/40 px-4 py-3 text-base font-medium transition duration-300',
+                pathname.startsWith('/admin/moderation')
+                  ? 'bg-surface/60 text-foreground shadow-soft'
+                  : 'bg-background/60 text-foreground/70 hover:bg-surface/40 hover:text-foreground',
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <span className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Модерация
+              </span>
+              <motion.span
+                className="h-2 w-2 rounded-full bg-primary"
+                initial={false}
+                animate={{
+                  scale: pathname.startsWith('/admin/moderation') ? 1 : 0,
+                  opacity: pathname.startsWith('/admin/moderation') ? 1 : 0,
+                }}
+                transition={{ duration: 0.2 }}
+              />
+            </Link>
+          )}
           <div className="flex items-center justify-between gap-3">
             <ThemeToggle layout="label" className="flex-1" />
-            <Button variant="ghost" size="sm" className="flex-1" asChild>
-              <Link href="/login">Войти</Link>
-            </Button>
+            <AuthButton variant="ghost" size="sm" className="flex-1" />
           </div>
+          {hasRole && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full justify-between gap-2 border-primary/20 bg-primary/5 text-base font-semibold tracking-wide text-primary"
+              asChild
+            >
+              <Link href="/admin/moderation" onClick={() => setMobileMenuOpen(false)}>
+                <span>Модерация</span>
+                <Shield className="h-4 w-4" />
+              </Link>
+            </Button>
+          )}
           <Button
             size="lg"
             className="w-full justify-between gap-2 bg-gradient-to-br from-ribbon-orange via-primary to-ribbon-black text-base font-semibold tracking-wide shadow-glow transition"
             asChild
           >
-            <Link href="/fallen/new">
+            <Link href="/fallen/create">
               <span>Зажечь свечу памяти</span>
               <Flame className="h-4 w-4" />
             </Link>
