@@ -1,5 +1,6 @@
 "use client";
 
+import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,7 +14,7 @@ import {
   Upload,
 } from "lucide-react";
 
-import { TimelineItem } from "@/types";
+import type { TimelineItem } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,8 @@ import { cn } from "@/lib/utils";
 import { useCanDeleteContent } from "@/hooks/useCanDeleteContent";
 
 const MAX_WORDS = 500;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export type TimelineWithFormProps = {
   items: TimelineItem[];
@@ -75,6 +78,13 @@ const getYearFromItem = (item: ExtendedTimelineItem): number | null => {
     return item.year;
   }
 
+  if (item.created_at) {
+    const parsed = new Date(item.created_at);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.getFullYear();
+    }
+  }
+
   return null;
 };
 
@@ -86,6 +96,14 @@ const getEventTimestamp = (item: ExtendedTimelineItem): number | null => {
 
   const parsed = new Date(source);
   return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+};
+
+const getDescriptionCandidate = (item: ExtendedTimelineItem) => {
+  if (typeof (item as Record<string, unknown>).description === "string") {
+    return (item as Record<string, unknown>).description as string;
+  }
+
+  return "";
 };
 
 export function TimelineWithForm({ items, fallenId, className }: TimelineWithFormProps) {
@@ -100,11 +118,15 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
   const [onlyWithMedia, setOnlyWithMedia] = useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ExtendedTimelineItem | null>(null);
+  const [removeExistingMedia, setRemoveExistingMedia] = useState(false);
   const [form, setForm] = useState<FormState>(initialForm);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewIsObjectUrl, setPreviewIsObjectUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -114,41 +136,109 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewIsObjectUrl && previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current);
       }
     };
-  }, [previewUrl]);
+  }, [previewIsObjectUrl, previewUrl]);
 
-  const handleInputChange = (field: keyof FormState, value: string | File | null) => {
+  const handleFieldChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
 
-    if (field === "file") {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(null);
-      }
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file =
+      event.target.files && event.target.files.length > 0 ? event.target.files[0] : null;
+    event.target.value = "";
 
-      if (value instanceof File) {
-        const url = URL.createObjectURL(value);
-        setPreviewUrl(url);
-      }
+    if (previewIsObjectUrl && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
+
+    if (!file) {
+      const existingPreview =
+        editingItem && !removeExistingMedia
+          ? editingItem.local_image_preview || editingItem.media?.file_url || null
+          : null;
+      setPreviewUrl(existingPreview);
+      setPreviewIsObjectUrl(false);
+      setForm((prev) => ({ ...prev, file: null }));
+      if (!editingItem) {
+        setRemoveExistingMedia(false);
+      }
+      return;
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setError("Поддерживаются только изображения JPG, PNG или WEBP.");
+      setPreviewUrl(
+        editingItem
+          ? editingItem.local_image_preview || editingItem.media?.file_url || null
+          : null,
+      );
+      setPreviewIsObjectUrl(false);
+      setForm((prev) => ({ ...prev, file: null }));
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError("Размер изображения не должен превышать 5 МБ.");
+      setPreviewUrl(
+        editingItem
+          ? editingItem.local_image_preview || editingItem.media?.file_url || null
+          : null,
+      );
+      setPreviewIsObjectUrl(false);
+      setForm((prev) => ({ ...prev, file: null }));
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setPreviewIsObjectUrl(true);
+    setForm((prev) => ({ ...prev, file }));
+    setRemoveExistingMedia(true);
+    setError(null);
+  };
+
+  const restoreExistingMedia = () => {
+    if (previewIsObjectUrl && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const existingPreview =
+      editingItem?.local_image_preview || editingItem?.media?.file_url || null;
+    setPreviewUrl(existingPreview);
+    setPreviewIsObjectUrl(false);
+    setRemoveExistingMedia(false);
+    setForm((prev) => ({ ...prev, file: null }));
+  };
+
+  const removeMediaCompletely = () => {
+    if (previewIsObjectUrl && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl(null);
+    setPreviewIsObjectUrl(false);
+    setRemoveExistingMedia(true);
+    setForm((prev) => ({ ...prev, file: null }));
   };
 
   const resetForm = () => {
+    if (previewIsObjectUrl && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setForm(initialForm);
     setError(null);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
+    setPreviewUrl(null);
+    setPreviewIsObjectUrl(false);
+    setRemoveExistingMedia(false);
+    setEditingItem(null);
   };
 
   const closeDialog = () => {
@@ -156,7 +246,31 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
     resetForm();
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleStartCreate = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const handleStartEdit = (item: ExtendedTimelineItem) => {
+    if (previewIsObjectUrl && previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    setEditingItem(item);
+    setForm({
+      date: item.date_exact ? item.date_exact.slice(0, 10) : "",
+      title: item.title ?? "",
+      description: item.description_md ?? getDescriptionCandidate(item),
+      file: null,
+    });
+    setRemoveExistingMedia(false);
+    setPreviewUrl(item.local_image_preview || item.media?.file_url || null);
+    setPreviewIsObjectUrl(false);
+    setError(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
@@ -175,7 +289,6 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
 
     try {
       const formData = new FormData();
-      formData.append("fallen_id", fallenId);
       formData.append("title", form.title.trim());
       formData.append("description", form.description.trim());
 
@@ -187,21 +300,34 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         formData.append("file", form.file);
       }
 
-      const response = await fetch("/api/timeline", {
-        method: "POST",
+      if (editingItem) {
+        formData.append("remove_media", removeExistingMedia ? "true" : "false");
+      } else {
+        formData.append("fallen_id", fallenId);
+      }
+
+      const endpoint = editingItem ? `/api/timeline/${editingItem.id}` : "/api/timeline";
+      const method = editingItem ? "PATCH" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Не удалось добавить запись.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Не удалось сохранить событие.");
       }
 
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current);
       }
 
-      setSuccessMessage("Запись добавлена в хронику. Спасибо, что делитесь историей!");
+      setSuccessMessage(
+        editingItem
+          ? "Запись обновлена. Благодарим за дополнение истории!"
+          : "Запись добавлена в хронику. Спасибо, что делитесь историей!",
+      );
       successTimeoutRef.current = setTimeout(() => {
         setSuccessMessage(null);
         successTimeoutRef.current = null;
@@ -210,14 +336,58 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
       closeDialog();
       router.refresh();
     } catch (submitError) {
-      console.error("Error creating timeline item:", submitError);
+      console.error("Error saving timeline item:", submitError);
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Не удалось добавить запись. Попробуйте ещё раз позже.",
+          : "Не удалось сохранить событие. Попробуйте позже.",
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (item: ExtendedTimelineItem) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Удалить событие из хроники? Его всегда можно добавить заново при необходимости.",
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      setDeletingId(item.id);
+      const response = await fetch(`/api/timeline/${item.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Не удалось удалить событие.");
+      }
+
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+
+      setSuccessMessage("Запись удалена из хроники.");
+      successTimeoutRef.current = setTimeout(() => {
+        setSuccessMessage(null);
+        successTimeoutRef.current = null;
+      }, 6000);
+
+      router.refresh();
+    } catch (deleteError) {
+      console.error("Error deleting timeline item:", deleteError);
+      alert(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Не удалось удалить событие. Попробуйте позже.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -314,12 +484,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         return true;
       }
 
-      const descriptionCandidate =
-        typeof (item as Record<string, unknown>).description === "string"
-          ? ((item as Record<string, unknown>).description as string)
-          : "";
-
-      const haystack = [item.title, item.description_md, descriptionCandidate]
+      const haystack = [item.title, item.description_md, getDescriptionCandidate(item)]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -353,7 +518,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                   Хроника жизни героя
                 </CardTitle>
                 <p className="mt-1 max-w-xl text-sm text-foreground/60">
-                  Собирайте ключевые вехи пути: детство, учебу, службу, волонтерство и совместные
+                  Собирайте ключевые вехи пути: детство, учебу, службу, волонтёрство и совместные
                   победы. История станет понятной и живой для будущих поколений.
                 </p>
               </div>
@@ -361,7 +526,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
 
             {canDelete && (
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
+                <Button onClick={handleStartCreate} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Добавить событие
                 </Button>
@@ -475,7 +640,13 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         </div>
 
         {filteredItems.length > 0 ? (
-          <Timeline items={filteredItems} />
+          <Timeline
+            items={filteredItems}
+            canManage={canDelete}
+            onEdit={canDelete ? handleStartEdit : undefined}
+            onDelete={canDelete ? handleDelete : undefined}
+            deletingId={deletingId}
+          />
         ) : timelineItems.length > 0 ? (
           <div className="space-y-4 rounded-2xl border border-dashed border-border/60 bg-background-soft/70 px-8 py-12 text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -510,7 +681,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
             </div>
             {canDelete ? (
               <div className="flex justify-center">
-                <Button onClick={() => setIsDialogOpen(true)} size="lg" className="gap-2">
+                <Button onClick={handleStartCreate} size="lg" className="gap-2">
                   <Plus className="h-5 w-5" />
                   Добавить первую запись
                 </Button>
@@ -536,7 +707,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         <DialogContent className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-border/40 bg-background/95 p-0">
           <DialogHeader className="space-y-2 border-b border-border/40 px-6 py-6">
             <DialogTitle className="text-xl font-semibold text-foreground">
-              Новая запись в хронике
+              {editingItem ? "Редактировать событие" : "Новая запись в хронике"}
             </DialogTitle>
             <DialogDescription className="text-sm text-foreground/70">
               Опишите событие так, чтобы читатель ощутил атмосферу момента. Добавьте точную дату и
@@ -552,7 +723,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                   type="date"
                   value={form.date}
                   max={new Date().toISOString().slice(0, 10)}
-                  onChange={(event) => handleInputChange("date", event.target.value)}
+                  onChange={(event) => handleFieldChange("date", event.target.value)}
                 />
               </label>
 
@@ -564,7 +735,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                   minLength={3}
                   maxLength={140}
                   value={form.title}
-                  onChange={(event) => handleInputChange("title", event.target.value)}
+                  onChange={(event) => handleFieldChange("title", event.target.value)}
                   placeholder="Например: Первые шаги в музыке"
                 />
               </label>
@@ -580,7 +751,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                   isWordLimitExceeded && "border-destructive/60 focus:ring-destructive/40",
                 )}
                 value={form.description}
-                onChange={(event) => handleInputChange("description", event.target.value)}
+                onChange={(event) => handleFieldChange("description", event.target.value)}
                 placeholder="Что происходило? Кто был рядом? Чем это событие важно для героя и его окружения?"
               />
               <span
@@ -606,24 +777,64 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                     type="file"
                     accept="image/*"
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    onChange={(event) =>
-                      handleInputChange(
-                        "file",
-                        event.target.files && event.target.files.length > 0
-                          ? event.target.files[0]
-                          : null,
-                      )
-                    }
+                    onChange={handleFileChange}
                   />
                 </div>
               </label>
-              {previewUrl && (
-                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background-soft">
-                  <img
-                    src={previewUrl}
-                    alt="Предпросмотр выбранной фотографии"
-                    className="h-full w-full max-h-72 object-cover"
-                  />
+
+              {(previewUrl || (editingItem && removeExistingMedia)) && (
+                <div className="space-y-2">
+                  {previewUrl && (
+                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-background-soft">
+                      <img
+                        src={previewUrl}
+                        alt="Предпросмотр выбранной фотографии"
+                        className="h-full w-full max-h-72 object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {editingItem && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/70">
+                      {form.file ? (
+                        <>
+                          <span>Выбрано новое фото. Текущее будет заменено.</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={restoreExistingMedia}
+                          >
+                            Отменить замену
+                          </Button>
+                        </>
+                      ) : removeExistingMedia ? (
+                        <>
+                          <span>Фото будет удалено после сохранения.</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={restoreExistingMedia}
+                          >
+                            Вернуть фото
+                          </Button>
+                        </>
+                      ) : previewUrl ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={removeMediaCompletely}
+                        >
+                          Удалить фото
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -648,7 +859,11 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                 className="sm:min-w-[180px]"
                 disabled={isSubmitting || isWordLimitExceeded}
               >
-                {isSubmitting ? "Сохраняем..." : "Добавить событие"}
+                {isSubmitting
+                  ? "Сохраняем..."
+                  : editingItem
+                    ? "Сохранить изменения"
+                    : "Добавить событие"}
               </Button>
             </div>
           </form>

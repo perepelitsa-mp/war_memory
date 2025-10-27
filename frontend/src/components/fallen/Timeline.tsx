@@ -1,10 +1,19 @@
-'use client'
+'use client';
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { Calendar, ChevronDown, ChevronUp, ImageIcon, ShieldAlert } from "lucide-react";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  ImageIcon,
+  Loader2,
+  Pencil,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 
-import { TimelineItem } from "@/types";
+import type { TimelineItem } from "@/types";
 import { formatDate, cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +31,13 @@ export type ExtendedTimelineItem = TimelineItem & {
 
 interface TimelineProps {
   items: ExtendedTimelineItem[];
+  canManage?: boolean;
+  onEdit?: (item: ExtendedTimelineItem) => void;
+  onDelete?: (item: ExtendedTimelineItem) => void;
+  deletingId?: string | null;
 }
 
-interface TimelineItemCardProps {
+interface TimelineItemCardProps extends TimelineProps {
   item: ExtendedTimelineItem;
   index: number;
 }
@@ -63,15 +76,25 @@ const getYearFromItem = (item: ExtendedTimelineItem): number | null => {
   return null;
 };
 
-function TimelineItemCard({ item, index }: TimelineItemCardProps) {
+const getDescriptionCandidate = (item: ExtendedTimelineItem) => {
+  if (typeof (item as Record<string, unknown>).description === "string") {
+    return (item as Record<string, unknown>).description as string;
+  }
+
+  return "";
+};
+
+function TimelineItemCard({
+  item,
+  index,
+  canManage,
+  onEdit,
+  onDelete,
+  deletingId,
+}: TimelineItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const rawDescription =
-    item.description_md ??
-    (typeof (item as Record<string, unknown>).description === "string"
-      ? ((item as Record<string, unknown>).description as string)
-      : "");
-
+  const rawDescription = item.description_md ?? getDescriptionCandidate(item);
   const plainText = useMemo(() => toPlainText(rawDescription), [rawDescription]);
 
   const isLongDescription = plainText.length > PREVIEW_LENGTH;
@@ -88,6 +111,7 @@ function TimelineItemCard({ item, index }: TimelineItemCardProps) {
     : yearBadge
       ? `${yearBadge} год`
       : "Дата не указана";
+  const isDeleting = deletingId === item.id;
 
   return (
     <div className={cn("relative pl-14", index === 0 && "pt-2")}>
@@ -99,24 +123,58 @@ function TimelineItemCard({ item, index }: TimelineItemCardProps) {
 
       <Card className="group border border-border/40 bg-gradient-to-br from-background/95 to-background-soft/90 shadow-soft transition-all hover:border-primary/30 hover:shadow-md">
         <CardContent className="space-y-4 pt-5 pb-5">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{dateLabel}</span>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{dateLabel}</span>
+              </div>
+
+              {hasMedia && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 border border-primary/20 bg-primary/10 text-[0.65rem] text-primary"
+                >
+                  <ImageIcon className="h-3 w-3" />
+                  Фото
+                </Badge>
+              )}
+
+              {isPending && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 border border-warning/40 bg-warning/15 text-[0.65rem] text-warning"
+                >
+                  <ShieldAlert className="h-3 w-3" />
+                  На модерации
+                </Badge>
+              )}
             </div>
 
-            {hasMedia && (
-              <Badge variant="secondary" className="gap-1 border border-primary/20 bg-primary/10 text-[0.65rem] text-primary">
-                <ImageIcon className="h-3 w-3" />
-                Фото
-              </Badge>
-            )}
-
-            {isPending && (
-              <Badge variant="secondary" className="gap-1 border border-warning/40 bg-warning/15 text-[0.65rem] text-warning">
-                <ShieldAlert className="h-3 w-3" />
-                На модерации
-              </Badge>
+            {canManage && (
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-foreground/60 hover:text-foreground"
+                  onClick={() => onEdit?.(item)}
+                  title="Редактировать событие"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive/60 hover:text-destructive"
+                  onClick={() => onDelete?.(item)}
+                  disabled={isDeleting}
+                  title="Удалить событие"
+                >
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
+              </div>
             )}
           </div>
 
@@ -168,7 +226,7 @@ function TimelineItemCard({ item, index }: TimelineItemCardProps) {
   );
 }
 
-export function Timeline({ items }: TimelineProps) {
+export function Timeline({ items, canManage, onEdit, onDelete, deletingId }: TimelineProps) {
   if (!items || items.length === 0) {
     return (
       <div className="rounded-2xl border border-border/40 bg-background-soft/80 px-6 py-8 text-center text-sm text-foreground/70">
@@ -182,7 +240,15 @@ export function Timeline({ items }: TimelineProps) {
       <div className="pointer-events-none absolute left-[19px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/40 via-border/60 to-primary/20" />
 
       {items.map((item, index) => (
-        <TimelineItemCard key={`${item.id}-${index}`} item={item} index={index} />
+        <TimelineItemCard
+          key={`${item.id}-${index}`}
+          item={item}
+          index={index}
+          canManage={canManage}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          deletingId={deletingId}
+        />
       ))}
     </div>
   );

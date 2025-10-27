@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,26 +16,56 @@ interface Photo {
 interface PhotoSliderProps {
   photos: Photo[]
   className?: string
+  initialIndex?: number
+  onIndexChange?: (index: number) => void
 }
 
-export function PhotoSlider({ photos, className }: PhotoSliderProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+export function PhotoSlider({
+  photos,
+  className,
+  initialIndex = 0,
+  onIndexChange,
+}: PhotoSliderProps) {
+  const [currentIndex, setCurrentIndex] = useState(() =>
+    Math.min(Math.max(initialIndex, 0), Math.max(photos.length - 1, 0)),
+  )
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   if (!photos || photos.length === 0) {
     return null
   }
 
+  const updateIndex = (value: number) => {
+    const nextIndex = ((value % photos.length) + photos.length) % photos.length
+    setCurrentIndex(nextIndex)
+    onIndexChange?.(nextIndex)
+  }
+
+  if (currentIndex >= photos.length && photos.length > 0) {
+    setCurrentIndex(photos.length - 1)
+  }
+
+  useEffect(() => {
+    setCurrentIndex((prev) => {
+      const bounded = Math.min(Math.max(initialIndex, 0), Math.max(photos.length - 1, 0))
+      if (prev === bounded) {
+        return prev
+      }
+      onIndexChange?.(bounded)
+      return bounded
+    })
+  }, [initialIndex, photos.length, onIndexChange])
+
   const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))
+    updateIndex(currentIndex === 0 ? photos.length - 1 : currentIndex - 1)
   }
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1))
+    updateIndex(currentIndex === photos.length - 1 ? 0 : currentIndex + 1)
   }
 
   const goToIndex = (index: number) => {
-    setCurrentIndex(index)
+    updateIndex(index)
   }
 
   const openFullscreen = () => {

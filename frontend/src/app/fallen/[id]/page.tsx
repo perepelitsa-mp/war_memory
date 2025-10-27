@@ -542,7 +542,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
         </Card>
       </section>
 
-      <section id="comments">
+      <section >
         <Card className="border border-border/50 bg-background/80 shadow-soft backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Свидетельства близких</CardTitle>

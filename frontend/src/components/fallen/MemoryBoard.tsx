@@ -260,13 +260,13 @@ export function MemoryBoard({ memories, fallenId, className }: MemoryBoardProps)
 
   return (
     <>
-      <Card
+      <Card id="comments"
         className={cn(
           'border border-border/40 bg-background/80 shadow-xl backdrop-blur-sm',
           className
         )}
       >
-        <CardHeader className="space-y-6">
+        <CardHeader className="space-y-6" >
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
