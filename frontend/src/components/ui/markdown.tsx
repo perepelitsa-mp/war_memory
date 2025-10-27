@@ -26,7 +26,7 @@ export function Markdown({ content, className }: MarkdownProps) {
 
         // Customize paragraph
         p: ({ node, ...props }) => (
-          <p className="mb-4 leading-relaxed text-gray-700" {...props} />
+          <p className="mb-4 leading-relaxed" {...props} />
         ),
 
         // Customize lists
@@ -53,7 +53,7 @@ export function Markdown({ content, className }: MarkdownProps) {
         // Customize blockquotes
         blockquote: ({ node, ...props }) => (
           <blockquote
-            className="border-l-4 border-ribbon-orange pl-4 italic my-4 text-gray-600"
+            className="border-l-4 border-ribbon-orange pl-4 italic my-4 text-muted-foreground"
             {...props}
           />
         ),
@@ -64,7 +64,7 @@ export function Markdown({ content, className }: MarkdownProps) {
           if (isInline) {
             return (
               <code
-                className="bg-gray-100 rounded px-1.5 py-0.5 text-sm font-mono"
+                className="bg-muted rounded px-1.5 py-0.5 text-sm font-mono"
                 {...props}
               >
                 {children}
@@ -73,7 +73,7 @@ export function Markdown({ content, className }: MarkdownProps) {
           }
           return (
             <code
-              className="block bg-gray-100 rounded p-4 overflow-x-auto text-sm font-mono my-4"
+              className="block bg-muted rounded p-4 overflow-x-auto text-sm font-mono my-4"
               {...props}
             >
               {children}
@@ -83,7 +83,7 @@ export function Markdown({ content, className }: MarkdownProps) {
 
         // Customize horizontal rule
         hr: ({ node, ...props }) => (
-          <hr className="my-8 border-t-2 border-gray-200" {...props} />
+          <hr className="my-8 border-t-2 border-border" {...props} />
         ),
       }}
     >

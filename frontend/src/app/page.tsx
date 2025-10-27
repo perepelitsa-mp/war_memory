@@ -45,7 +45,7 @@ export default async function HomePage() {
           </h1>
           <p className="text-lg text-muted-foreground md:text-xl">
             Цифровой мемориал собирает истории павших защитников, чтобы память
-            жила в каждом доме и оставалась частью нашей общей истории.
+            жила в каждом доме и оставалась частью нашей общей истории. Страна обязана знать своих Героев.
           </p>
 
           {/* Акцентный маркер раздела */}
@@ -58,7 +58,7 @@ export default async function HomePage() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="rounded-lg border bg-card p-6 text-center">
             <div className="text-3xl font-bold text-primary">{fallenList.length}</div>
-            <div className="mt-1 text-sm text-muted-foreground">карточек памяти в базе</div>
+            <div className="mt-1 text-sm text-muted-foreground">героев в мемориале</div>
           </div>
           <div className="rounded-lg border bg-card p-6 text-center">
             <div className="text-3xl font-bold text-primary">{uniqueHometownsCount}</div>

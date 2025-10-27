@@ -10,13 +10,13 @@ const navigation = {
     { href: '/', label: 'Главная' },
     { href: '/fallen', label: 'Память героев' },
     { href: '/map', label: 'Карта памяти' },
-    { href: '/chronicles', label: 'Хроника событий' },
+    { href: '/chronicles', label: 'Хроника жизни' },
   ],
   info: [
     { href: '/about', label: 'О проекте' },
-    { href: '/curators', label: 'Кураторский совет' },
-    { href: '/press', label: 'Пресс-центр' },
-    { href: '/contact', label: 'Связаться с командой' },
+    { href: '/curators', label: 'Администрация' },
+    // { href: '/press', label: 'Пресс-центр' },
+    // { href: '/contact', label: 'Связаться с командой' },
   ],
   legal: [
     { href: '/privacy', label: 'Политика конфиденциальности' },
@@ -65,11 +65,11 @@ export function Footer() {
               <h3 className="text-balance font-serif text-3xl font-semibold text-foreground md:text-4xl">
                 Мы собираем и оживляем истории, чтобы имена героев звучали в каждом доме.
               </h3>
-              <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
+              {/* <p className="max-w-xl text-sm leading-relaxed text-foreground/70">
                 Цифровой мемориал объединяет архивы, семейные хроники и интерактивную карту памяти. Вы можете
                 зажечь свечу, поделиться историей семьи, услышать голоса фронтовиков или отправиться по маршруту их
                 подвигов.
-              </p>
+              </p> */}
             </motion.div>
 
             <motion.blockquote
@@ -160,7 +160,7 @@ export function Footer() {
               ))}
             </ul>
 
-            <div className="space-y-3 pt-2">
+            {/* <div className="space-y-3 pt-2">
               <span className="text-xs uppercase tracking-[0.3em] text-foreground/60">Мы рядом</span>
               <div className="flex flex-wrap gap-3 text-foreground/70">
                 <a
@@ -191,7 +191,7 @@ export function Footer() {
                   <Youtube className="h-5 w-5" />
                 </a>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 

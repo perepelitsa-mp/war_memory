@@ -84,7 +84,10 @@ export default async function FallenDetailPage({ params }: PageProps) {
 
   const { data: timelineItems } = await supabase
     .from('timeline_items')
-    .select('*')
+    .select(`
+      *,
+      media:fallen_media(*)
+    `)
     .eq('fallen_id', id)
     .eq('status', 'approved')
     .eq('is_deleted', false)
@@ -167,6 +170,38 @@ export default async function FallenDetailPage({ params }: PageProps) {
         .order('created_at', { ascending: true })
     : { data: [] as any[] }
 
+  // Собираем все media_ids из воспоминаний и дополнений
+  const allMediaIds = [
+    ...(memoryItemsDetailed || [])
+      .filter((m: any) => m.media_ids && Array.isArray(m.media_ids))
+      .flatMap((m: any) => m.media_ids),
+    ...(memoryAdditions || [])
+      .filter((a: any) => a.media_ids && Array.isArray(a.media_ids))
+      .flatMap((a: any) => a.media_ids),
+  ]
+
+  // Загрузка медиафайлов
+  const { data: mediaFiles } = allMediaIds.length > 0
+    ? await supabase
+        .from('fallen_media')
+        .select('*')
+        .in('id', allMediaIds)
+        .eq('is_deleted', false)
+        .eq('status', 'approved')
+    : { data: [] as any[] }
+
+  // Создаём мапу медиафайлов по ID для быстрого доступа
+  const mediaMap = new Map((mediaFiles || []).map((m) => [m.id, m]))
+
+  // Загрузка ВСЕХ фотографий для галереи (fallen_media напрямую связанные с fallen)
+  const { data: allGalleryPhotos } = await supabase
+    .from('fallen_media')
+    .select('*')
+    .eq('fallen_id', id)
+    .eq('is_deleted', false)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+
   // Загрузка наград героя
   const { data: fallenAwardsData } = await supabase
     .from('fallen_awards')
@@ -235,7 +270,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
           return {
             ...add,
             comments: buildCommentsTree(additionComments),
-            media: [], // TODO: загрузка медиа для дополнений
+            media: (add.media_ids || []).map((id: string) => mediaMap.get(id)).filter(Boolean),
           }
         })
 
@@ -247,7 +282,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
         ...memory,
         additions: memoryAdditionsForItem,
         comments: buildCommentsTree(itemComments),
-        media: [], // TODO: загрузка медиа для воспоминаний
+        media: (memory.media_ids || []).map((id: string) => mediaMap.get(id)).filter(Boolean),
       } as MemoryItemWithDetails
     },
   )
@@ -488,20 +523,23 @@ export default async function FallenDetailPage({ params }: PageProps) {
         </section>
       )}
 
-      <section className="grid gap-6 items-start lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)]">
-        <TimelineWithForm items={timeline} fallenId={id} className="h-full" />
-        <Card className="h-full border border-border/50 bg-background/80 shadow-soft backdrop-blur-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-foreground">Галерея памяти</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MemoryGallery items={memories} />
-          </CardContent>
-        </Card>
+      <section>
+        <TimelineWithForm items={timeline} fallenId={id} />
       </section>
 
       <section>
         <MemoryBoard memories={memoriesWithDetails} fallenId={id} />
+      </section>
+
+      <section>
+        <Card className="border border-border/50 bg-background/80 shadow-soft backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-foreground">Галерея памяти</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MemoryGallery photos={allGalleryPhotos || []} fallenId={id} />
+          </CardContent>
+        </Card>
       </section>
 
       <section id="comments">
@@ -510,7 +548,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
             <CardTitle>Свидетельства близких</CardTitle>
           </CardHeader>
           <CardContent>
-            <Comments comments={commentsTree} />
+            <Comments comments={commentsTree} fallenId={id} />
           </CardContent>
         </Card>
       </section>

@@ -207,4 +207,14 @@
   .scrollbar-soft:hover::-webkit-scrollbar-thumb {
     background-color: hsl(var(--foreground) / 0.35);
   }
+
+  /* Скрытый скроллбар */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

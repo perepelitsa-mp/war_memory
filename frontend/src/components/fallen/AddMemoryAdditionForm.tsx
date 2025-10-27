@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,21 +12,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, ImagePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface AddMemoryFormProps {
+interface AddMemoryAdditionFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  memoryId: string
   fallenId: string
   onSuccess?: () => void
 }
 
-const MAX_WORDS = 3000
+const MAX_WORDS = 1000
 const MAX_PHOTOS = 10
 
-export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMemoryFormProps) {
-  const [title, setTitle] = useState('')
+export function AddMemoryAdditionForm({
+  open,
+  onOpenChange,
+  memoryId,
+  fallenId,
+  onSuccess,
+}: AddMemoryAdditionFormProps) {
   const [content, setContent] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
@@ -70,13 +75,8 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
     e.preventDefault()
     setError(null)
 
-    if (!title.trim()) {
-      setError('Введите заголовок воспоминания')
-      return
-    }
-
     if (!content.trim()) {
-      setError('Введите описание воспоминания')
+      setError('Введите текст дополнения')
       return
     }
 
@@ -112,15 +112,14 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
         mediaIds = uploadData.mediaIds || []
       }
 
-      // Затем создаем воспоминание с ID загруженных фото
-      const response = await fetch('/api/memories', {
+      // Затем создаем дополнение с ID загруженных фото
+      const response = await fetch('/api/memory-additions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fallen_id: fallenId,
-          title: title.trim(),
+          memory_item_id: memoryId,
           content_md: content.trim(),
           media_ids: mediaIds,
         }),
@@ -128,38 +127,34 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create memory')
+        throw new Error(errorData.error || 'Failed to create addition')
       }
 
       // Сброс формы
-      setTitle('')
       setContent('')
       setPhotos([])
       setPhotoPreviews([])
       onOpenChange(false)
 
-      // Обновляем страницу для отображения нового воспоминания
+      // Обновляем страницу для отображения нового дополнения
       window.location.reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при сохранении воспоминания. Попробуйте ещё раз.')
-      console.error('Error submitting memory:', err)
+      setError(
+        err instanceof Error ? err.message : 'Ошибка при сохранении дополнения. Попробуйте ещё раз.'
+      )
+      console.error('Error submitting addition:', err)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleCancel = () => {
-    if (
-      !title &&
-      !content &&
-      photos.length === 0
-    ) {
+    if (!content && photos.length === 0) {
       onOpenChange(false)
       return
     }
 
     if (confirm('Вы уверены? Все введённые данные будут потеряны.')) {
-      setTitle('')
       setContent('')
       setPhotos([])
       setPhotoPreviews([])
@@ -172,39 +167,21 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Добавить воспоминание</DialogTitle>
+          <DialogTitle>Дополнить воспоминание</DialogTitle>
           <DialogDescription>
-            Поделитесь своими воспоминаниями о герое. Ваша история будет сразу опубликована на
-            странице.
+            Добавьте свою историю или дополнительную информацию к этому воспоминанию. Дополнение
+            будет сразу опубликовано на странице.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">
-              Заголовок <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="title"
-              placeholder="Например: 'Наша служба вместе' или 'Воспоминания из детства'"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={255}
-              disabled={isSubmitting}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              {title.length}/255 символов
-            </p>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="content">
-              Описание воспоминания <span className="text-destructive">*</span>
+              Текст дополнения <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="content"
-              placeholder="Напишите ваше воспоминание... Вы можете использовать Markdown для форматирования."
+              placeholder="Напишите ваше дополнение к воспоминанию... Вы можете использовать Markdown для форматирования."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={10}
@@ -217,7 +194,7 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
               <p
                 className={cn(
                   'font-medium',
-                  isOverLimit ? 'text-destructive' : 'text-muted-foreground',
+                  isOverLimit ? 'text-destructive' : 'text-muted-foreground'
                 )}
               >
                 {wordCount}/{MAX_WORDS} слов
@@ -285,12 +262,7 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
           )}
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Отмена
             </Button>
             <Button type="submit" disabled={isSubmitting || isOverLimit}>

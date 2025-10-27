@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Markdown } from '@/components/ui/markdown'
-import { Heart, ImageIcon, Plus, MessageCircle, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { PhotoSlider } from '@/components/fallen/PhotoSlider'
+import { Heart, ImageIcon, Plus, MessageCircle, ChevronDown, ChevronUp, Trash2, Pencil } from 'lucide-react'
 import type { MemoryItemWithDetails, MemoryAdditionWithDetails, CommentWithAuthor } from '@/types'
 import { cn } from '@/lib/utils'
 import { useCanDeleteContent } from '@/hooks/useCanDeleteContent'
@@ -17,6 +18,7 @@ interface MemoryCardProps {
   fallenId: string
   onAddAddition?: (memoryId: string) => void
   onAddComment?: (entityType: 'memory' | 'addition', entityId: string, parentId?: string) => void
+  onEditMemory?: (memory: MemoryItemWithDetails) => void
   onMemoryDeleted?: () => void
 }
 
@@ -76,7 +78,7 @@ function MemoryComment({ comment, depth = 0, onReply, canDelete, onDelete }: Mem
                 <span className="text-xs text-foreground/50">{formatDate(comment.created_at)}</span>
               </div>
 
-              <p className="text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap">
+              <p className="text-sm leading-relaxed text-foreground/95 whitespace-pre-wrap">
                 {comment.content}
               </p>
 
@@ -134,10 +136,22 @@ interface AdditionItemProps {
   onAddComment?: (additionId: string) => void
   canDelete?: boolean
   onDeleteComment?: (commentId: string) => void
+  onDeleteAddition?: (additionId: string) => void
 }
 
-function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteComment }: AdditionItemProps) {
+function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteComment, onDeleteAddition }: AdditionItemProps) {
   const [showComments, setShowComments] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteAddition = async () => {
+    if (!onDeleteAddition || !confirm('Вы уверены, что хотите удалить это дополнение?')) {
+      return
+    }
+
+    setIsDeleting(true)
+    await onDeleteAddition(addition.id)
+    setIsDeleting(false)
+  }
 
   const initials = addition.author.full_name
     .split(' ')
@@ -166,39 +180,33 @@ function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteCommen
             </Avatar>
 
             <div className="flex-1">
-              <div className="flex items-center gap-2 text-xs text-foreground/60">
-                <span className="font-semibold text-foreground">{addition.author.full_name}</span>
-                <span>•</span>
-                <span>{formatDate(addition.created_at)}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-foreground/60">
+                  <span className="font-semibold text-foreground">{addition.author.full_name}</span>
+                  <span>•</span>
+                  <span>{formatDate(addition.created_at)}</span>
+                </div>
+                {canDelete && onDeleteAddition && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-destructive/60 hover:text-destructive"
+                    onClick={handleDeleteAddition}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
 
           {addition.content_md && (
-            <Markdown content={addition.content_md} className="prose prose-sm text-foreground/80" />
+            <Markdown content={addition.content_md} className="prose prose-sm text-foreground/95" />
           )}
 
           {addition.media && addition.media.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {addition.media.map((media) => (
-                <div
-                  key={media.id}
-                  className="relative aspect-square overflow-hidden rounded-lg border border-border/50 bg-background"
-                >
-                  {media.file_url ? (
-                    <img
-                      src={media.file_url}
-                      alt={media.alt_text || ''}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <ImageIcon className="h-6 w-6 text-foreground/30" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <PhotoSlider photos={addition.media} />
           )}
 
           <div className="flex items-center gap-2 border-t pt-3">
@@ -246,7 +254,7 @@ function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteCommen
   )
 }
 
-export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onMemoryDeleted }: MemoryCardProps) {
+export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEditMemory, onMemoryDeleted }: MemoryCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [showAdditions, setShowAdditions] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -307,6 +315,25 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onMe
     }
   }
 
+  const handleDeleteAddition = async (additionId: string) => {
+    try {
+      const response = await fetch(`/api/memory-additions/${additionId}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete addition')
+      }
+
+      // Обновляем страницу для отображения изменений
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting addition:', error)
+      alert(error instanceof Error ? error.message : 'Не удалось удалить дополнение')
+    }
+  }
+
   return (
     <Card className="overflow-hidden border border-border/50 bg-gradient-to-br from-background/95 via-background-soft/90 to-background/95 shadow-glow">
       <CardHeader className="border-b border-border/30 bg-background/50">
@@ -339,6 +366,17 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onMe
               <Heart className="h-3 w-3" />
               Память
             </Badge>
+            {canDelete && onEditMemory && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-foreground/60 hover:text-foreground"
+                onClick={() => onEditMemory(memory)}
+                disabled={isDeleting}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
             {canDelete && (
               <Button
                 variant="ghost"
@@ -356,30 +394,11 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onMe
 
       <CardContent className="space-y-6 pt-6">
         {memory.content_md && (
-          <Markdown content={memory.content_md} className="prose text-foreground/85" />
+          <Markdown content={memory.content_md} className="prose text-foreground" />
         )}
 
         {memory.media && memory.media.length > 0 && (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {memory.media.slice(0, 10).map((media) => (
-              <div
-                key={media.id}
-                className="relative aspect-square overflow-hidden rounded-xl border border-border/50 bg-background shadow-sm"
-              >
-                {media.file_url ? (
-                  <img
-                    src={media.file_url}
-                    alt={media.alt_text || ''}
-                    className="h-full w-full object-cover transition hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <ImageIcon className="h-8 w-8 text-foreground/30" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <PhotoSlider photos={memory.media.slice(0, 10)} />
         )}
 
         {approvedAdditions.length > 0 && (
@@ -415,6 +434,7 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onMe
                     }
                     canDelete={canDelete}
                     onDeleteComment={handleDeleteComment}
+                    onDeleteAddition={handleDeleteAddition}
                   />
                 ))}
               </div>
