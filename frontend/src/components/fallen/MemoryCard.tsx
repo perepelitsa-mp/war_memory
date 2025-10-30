@@ -12,6 +12,7 @@ import { Heart, ImageIcon, Plus, MessageCircle, ChevronDown, ChevronUp, Trash2, 
 import type { MemoryItemWithDetails, MemoryAdditionWithDetails, CommentWithAuthor } from '@/types'
 import { cn } from '@/lib/utils'
 import { useCanDeleteContent } from '@/hooks/useCanDeleteContent'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface MemoryCardProps {
   memory: MemoryItemWithDetails
@@ -31,6 +32,7 @@ interface MemoryCommentProps {
 }
 
 function MemoryComment({ comment, depth = 0, onReply, canDelete, onDelete }: MemoryCommentProps) {
+  const { confirm } = useConfirmDialog()
   const [isDeleting, setIsDeleting] = useState(false)
   const maxDepth = 3
   const isNested = depth > 0
@@ -44,7 +46,19 @@ function MemoryComment({ comment, depth = 0, onReply, canDelete, onDelete }: Mem
     .slice(0, 2)
 
   const handleDelete = async () => {
-    if (!onDelete || !confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+    if (!onDelete) {
+      return
+    }
+
+    const confirmed = await confirm({
+      title: 'Удалить комментарий',
+      description: 'Вы уверены, что хотите удалить этот комментарий?',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) {
       return
     }
 
@@ -140,11 +154,24 @@ interface AdditionItemProps {
 }
 
 function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteComment, onDeleteAddition }: AdditionItemProps) {
+  const { confirm } = useConfirmDialog()
   const [showComments, setShowComments] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDeleteAddition = async () => {
-    if (!onDeleteAddition || !confirm('Вы уверены, что хотите удалить это дополнение?')) {
+    if (!onDeleteAddition) {
+      return
+    }
+
+    const confirmed = await confirm({
+      title: 'Удалить дополнение',
+      description: 'Вы уверены, что хотите удалить это дополнение?',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) {
       return
     }
 
@@ -255,6 +282,7 @@ function AdditionItem({ addition, index, onAddComment, canDelete, onDeleteCommen
 }
 
 export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEditMemory, onMemoryDeleted }: MemoryCardProps) {
+  const { confirm, alert } = useConfirmDialog()
   const [showComments, setShowComments] = useState(false)
   const [showAdditions, setShowAdditions] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -272,7 +300,15 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEd
   ) || []
 
   const handleDeleteMemory = async () => {
-    if (!confirm('Вы уверены, что хотите удалить это воспоминание?')) {
+    const confirmed = await confirm({
+      title: 'Удалить воспоминание',
+      description: 'Вы уверены, что хотите удалить это воспоминание?',
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'destructive',
+    })
+
+    if (!confirmed) {
       return
     }
 
@@ -291,7 +327,11 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEd
       window.location.reload()
     } catch (error) {
       console.error('Error deleting memory:', error)
-      alert(error instanceof Error ? error.message : 'Не удалось удалить воспоминание')
+      await alert({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось удалить воспоминание',
+        confirmText: 'Закрыть',
+      })
       setIsDeleting(false)
     }
   }
@@ -311,7 +351,11 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEd
       window.location.reload()
     } catch (error) {
       console.error('Error deleting comment:', error)
-      alert(error instanceof Error ? error.message : 'Не удалось удалить комментарий')
+      await alert({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось удалить комментарий',
+        confirmText: 'Закрыть',
+      })
     }
   }
 
@@ -330,7 +374,11 @@ export function MemoryCard({ memory, fallenId, onAddAddition, onAddComment, onEd
       window.location.reload()
     } catch (error) {
       console.error('Error deleting addition:', error)
-      alert(error instanceof Error ? error.message : 'Не удалось удалить дополнение')
+      await alert({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось удалить дополнение',
+        confirmText: 'Закрыть',
+      })
     }
   }
 

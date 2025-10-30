@@ -7,6 +7,7 @@ import { ModerationItem } from '@/components/profile/ModerationItem';
 import { ArrowLeft, Loader2, Clock, Image as ImageIcon, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom';
 
 interface PendingData {
   timeline: any[];
@@ -15,6 +16,7 @@ interface PendingData {
 }
 
 export default function ModerationPage({ params }: { params: { cardId: string } }) {
+  const { alert } = useConfirmDialog();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<PendingData>({ timeline: [], memory: [], comments: [] });
@@ -79,7 +81,11 @@ export default function ModerationPage({ params }: { params: { cardId: string } 
         return newData;
       });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Ошибка модерации');
+      await alert({
+        title: 'Ошибка',
+        description: err instanceof Error ? err.message : 'Ошибка модерации',
+        confirmText: 'Закрыть',
+      });
     }
   };
 

@@ -42,16 +42,16 @@ export function FallenCard({ fallen }: FallenCardProps) {
           )}
         </div>
 
-        <CardHeader className="pb-3">
-          <h3 className="text-xl font-semibold leading-tight line-clamp-2">
+        <CardHeader className="pb-2 sm:pb-3">
+          <h3 className="text-lg font-semibold leading-tight line-clamp-2 sm:text-xl">
             {fullName}
           </h3>
-          <p className="text-sm text-muted-foreground">{lifespan}</p>
+          <p className="text-xs text-muted-foreground sm:text-sm">{lifespan}</p>
         </CardHeader>
 
-        <CardContent className="pb-4">
+        <CardContent className="pb-3 sm:pb-4">
           {/* Военные данные */}
-          <div className="space-y-1 text-sm">
+          <div className="space-y-0.5 text-xs sm:space-y-1 sm:text-sm">
             {fallen.rank && (
               <p className="text-muted-foreground">
                 <span className="font-medium">Звание:</span> {fallen.rank}
@@ -72,7 +72,7 @@ export function FallenCard({ fallen }: FallenCardProps) {
 
           {/* Memorial Text */}
           {fallen.memorial_text && (
-            <p className="mt-3 text-sm text-foreground/70 line-clamp-3 transition-colors">
+            <p className="mt-2 text-xs text-foreground/70 line-clamp-3 transition-colors sm:mt-3 sm:text-sm">
               {truncate(fallen.memorial_text, 150)}
             </p>
           )}

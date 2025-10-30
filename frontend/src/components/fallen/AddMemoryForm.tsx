@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface AddMemoryFormProps {
   open: boolean
@@ -27,6 +28,7 @@ const MAX_WORDS = 3000
 const MAX_PHOTOS = 10
 
 export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMemoryFormProps) {
+  const { confirm } = useConfirmDialog()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
@@ -148,7 +150,7 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (
       !title &&
       !content &&
@@ -158,7 +160,15 @@ export function AddMemoryForm({ open, onOpenChange, fallenId, onSuccess }: AddMe
       return
     }
 
-    if (confirm('Вы уверены? Все введённые данные будут потеряны.')) {
+    const confirmed = await confirm({
+      title: 'Отменить добавление воспоминания',
+      description: 'Вы уверены? Все введённые данные будут потеряны.',
+      confirmText: 'Отменить',
+      cancelText: 'Продолжить редактирование',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       setTitle('')
       setContent('')
       setPhotos([])

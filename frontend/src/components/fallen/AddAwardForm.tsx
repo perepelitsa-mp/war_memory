@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Award as AwardIcon, Medal, Star, Shield, Loader2 } from 'lucide-react'
 import type { Award } from '@/types'
 import { cn } from '@/lib/utils'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface AddAwardFormProps {
   open: boolean
@@ -56,6 +57,7 @@ export function AddAwardForm({
   availableAwards,
   onSuccess,
 }: AddAwardFormProps) {
+  const { alert } = useConfirmDialog()
   const [selectedAward, setSelectedAward] = useState<Award | null>(null)
   const [citation, setCitation] = useState('')
   const [awardedDate, setAwardedDate] = useState('')
@@ -66,12 +68,20 @@ export function AddAwardForm({
     e.preventDefault()
 
     if (!selectedAward) {
-      alert('Выберите награду')
+      await alert({
+        title: 'Выберите награду',
+        description: 'Необходимо выбрать награду из списка',
+        confirmText: 'Понятно',
+      })
       return
     }
 
     if (!citation.trim()) {
-      alert('Укажите за что награждён')
+      await alert({
+        title: 'Укажите основание',
+        description: 'Укажите за что награждён',
+        confirmText: 'Понятно',
+      })
       return
     }
 
@@ -99,10 +109,18 @@ export function AddAwardForm({
       onOpenChange(false)
       onSuccess?.()
 
-      alert('Награда успешно добавлена!')
+      await alert({
+        title: 'Успешно',
+        description: 'Награда успешно добавлена!',
+        confirmText: 'Отлично',
+      })
     } catch (error) {
       console.error('Ошибка при добавлении награды:', error)
-      alert('Не удалось добавить награду. Попробуйте ещё раз.')
+      await alert({
+        title: 'Ошибка',
+        description: 'Не удалось добавить награду. Попробуйте ещё раз.',
+        confirmText: 'Закрыть',
+      })
     } finally {
       setIsSubmitting(false)
     }

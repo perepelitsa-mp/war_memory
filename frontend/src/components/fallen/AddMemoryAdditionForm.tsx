@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Loader2, AlertCircle, ImagePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface AddMemoryAdditionFormProps {
   open: boolean
@@ -33,6 +34,7 @@ export function AddMemoryAdditionForm({
   fallenId,
   onSuccess,
 }: AddMemoryAdditionFormProps) {
+  const { confirm } = useConfirmDialog()
   const [content, setContent] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
@@ -148,13 +150,21 @@ export function AddMemoryAdditionForm({
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!content && photos.length === 0) {
       onOpenChange(false)
       return
     }
 
-    if (confirm('Вы уверены? Все введённые данные будут потеряны.')) {
+    const confirmed = await confirm({
+      title: 'Отменить добавление дополнения',
+      description: 'Вы уверены? Все введённые данные будут потеряны.',
+      confirmText: 'Отменить',
+      cancelText: 'Продолжить редактирование',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       setContent('')
       setPhotos([])
       setPhotoPreviews([])

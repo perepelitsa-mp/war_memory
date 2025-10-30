@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -7,12 +6,19 @@ import { createClient } from '@/lib/supabase/server'
 import { getFullName } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Markdown } from '@/components/ui/markdown'
 import { TimelineWithForm } from '@/components/fallen/TimelineWithForm'
 import { MemoryGallery } from '@/components/fallen/MemoryGallery'
 import { MemoryBoard } from '@/components/fallen/MemoryBoard'
 import { AwardsSection } from '@/components/fallen/AwardsSection'
 import { Comments } from '@/components/fallen/Comments'
+import { MemorialTextSection } from '@/components/fallen/MemorialTextSection'
+import { BiographySection } from '@/components/fallen/BiographySection'
+import { ModeratorsSection } from '@/components/fallen/ModeratorsSection'
+import { ProfileEditor } from '@/components/fallen/ProfileEditor'
+import { HeroPhotoBlock } from '@/components/fallen/HeroPhotoBlock'
+import { CandleLightsList } from '@/components/fallen/CandleLightsList'
+import { HeroConnections } from '@/components/fallen/HeroConnections'
+import { ConnectionModeration } from '@/components/fallen/ConnectionModeration'
 import type {
   Award,
   CommentWithAuthor,
@@ -43,6 +49,17 @@ const safeFormatDate = (value: string | null, pattern: string = DATE_FORMAT) => 
   } catch {
     return '—'
   }
+}
+
+const getServiceTypeLabel = (serviceType: string | null) => {
+  if (!serviceType) return null
+  const labels: Record<string, string> = {
+    mobilized: 'Мобилизован',
+    volunteer: 'Доброволец',
+    pmc: 'ЧВК',
+    professional: 'Кадровый военнослужащий',
+  }
+  return labels[serviceType] || serviceType
 }
 
 const countNestedComments = (items: CommentRecord[]): number =>
@@ -81,6 +98,31 @@ export default async function FallenDetailPage({ params }: PageProps) {
         : deathYear
           ? `— ${deathYear}`
           : '—'
+
+  // Получаем информацию о текущем пользователе
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser()
+
+  const { data: currentUserData } = currentUser
+    ? await supabase.from('users').select('role').eq('id', currentUser.id).single()
+    : { data: null }
+
+  // Получаем информацию о владельце карточки
+  const { data: ownerData } = await supabase
+    .from('users')
+    .select('id, full_name, email, phone, avatar_url')
+    .eq('id', fallData.owner_id)
+    .single()
+
+  // Получаем информацию о редакторах
+  const editorIds = Array.isArray(fallData.editors) ? fallData.editors : []
+  const { data: editorsData } = editorIds.length > 0
+    ? await supabase
+        .from('users')
+        .select('id, full_name, email, phone, avatar_url')
+        .in('id', editorIds)
+    : { data: [] }
 
   const { data: timelineItems } = await supabase
     .from('timeline_items')
@@ -230,6 +272,47 @@ export default async function FallenDetailPage({ params }: PageProps) {
 
   const availableAwards: Award[] = allAwardsData || []
 
+  // Загрузка зажжённых свечей памяти
+  const { data: candleLightsData } = await supabase
+    .from('candle_lights')
+    .select(
+      `
+      id,
+      created_at,
+      user:users!candle_lights_user_id_fkey(id, full_name, avatar_url)
+    `
+    )
+    .eq('fallen_id', id)
+    .order('created_at', { ascending: false })
+    .limit(20) // Показываем последние 20 зажжённых свечей
+
+  const candleLights = candleLightsData || []
+  const candleCount = candleLights.length
+  const currentUserLitCandle = currentUser
+    ? candleLights.some((cl: any) => cl.user?.id === currentUser.id)
+    : false
+
+  // Загрузка связей героя (родственники, друзья, сослуживцы)
+  const { data: connectionsData } = await supabase
+    .from('hero_connections')
+    .select(
+      `
+      id,
+      connection_type,
+      relationship,
+      user:users!hero_connections_user_id_fkey(id, full_name, avatar_url, bio)
+    `
+    )
+    .eq('fallen_id', id)
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  const allConnections = connectionsData || []
+  const relatives = allConnections.filter((c: any) => c.connection_type === 'relative')
+  const friends = allConnections.filter((c: any) => c.connection_type === 'friend')
+  const fellowSoldiers = allConnections.filter((c: any) => c.connection_type === 'fellow_soldier')
+
   const buildCommentsTree = (flatComments: CommentWithAuthor[] = []): CommentRecord[] => {
     const map = new Map<string, CommentRecord>()
     const roots: CommentRecord[] = []
@@ -300,7 +383,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
     },
     {
       label: 'Галерея памяти',
-      value: memories.length,
+      value: (allGalleryPhotos || []).length,
       icon: Flame,
     },
     {
@@ -310,7 +393,41 @@ export default async function FallenDetailPage({ params }: PageProps) {
     },
   ]
 
+  // Check if user can edit fields
+  const isOwner = currentUser?.id === fallData.owner_id
+  const isEditor = currentUser?.id ? editorIds.includes(currentUser.id) : false
+  const isModerator = ['moderator', 'admin', 'superadmin'].includes(currentUserData?.role || '')
+  const canEditFields = isOwner || isEditor || isModerator
+
+  // Загрузка связей на модерации (только для владельцев, редакторов и модераторов)
+  let pendingConnections: any[] = []
+  if (canEditFields) {
+    const { data: pendingData } = await supabase
+      .from('hero_connections')
+      .select(
+        `
+        id,
+        connection_type,
+        relationship,
+        description,
+        created_at,
+        user:users!hero_connections_user_id_fkey(id, full_name, avatar_url, bio)
+      `
+      )
+      .eq('fallen_id', id)
+      .eq('status', 'pending')
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: true })
+
+    pendingConnections = pendingData || []
+  }
+
   const profileDetails = [
+    {
+      label: 'Вид службы',
+      value: getServiceTypeLabel(fallData.service_type),
+      icon: Shield,
+    },
     {
       label: 'Звание',
       value: fallData.rank,
@@ -323,7 +440,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
     },
     {
       label: 'Позывной',
-      value: fallData.call_sign,
+      value: (fallData as any).call_sign,
       icon: Flame,
     },
     {
@@ -355,6 +472,16 @@ export default async function FallenDetailPage({ params }: PageProps) {
 
   return (
     <div className="container space-y-12 py-10 md:space-y-16 md:py-16">
+      {ownerData && (
+        <ModeratorsSection
+          fallenId={id}
+          owner={ownerData}
+          editors={editorsData || []}
+          currentUserId={currentUser?.id || null}
+          currentUserRole={currentUserData?.role || 'guest'}
+        />
+      )}
+
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/80 px-6 py-8 shadow-soft transition-colors md:px-12 md:py-12">
         <div
           aria-hidden
@@ -367,26 +494,16 @@ export default async function FallenDetailPage({ params }: PageProps) {
 
         <div className="relative grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr] lg:items-start">
           <div className="space-y-6">
-            <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-background-soft/80 shadow-glow">
-              <div className="absolute inset-0 bg-gradient-to-t from-background/50 via-transparent to-transparent" />
-              {fallData.hero_photo_url ? (
-                <Image
-                  src={fallData.hero_photo_url}
-                  alt={fullName}
-                  width={720}
-                  height={960}
-                  className="h-full w-full object-cover"
-                  priority
-                />
-              ) : (
-                <div className="flex aspect-[3/4] items-center justify-center bg-[radial-gradient(circle_at_top,hsl(var(--surface)/0.85),hsl(var(--background-soft)/0.65))]">
-                  <span className="text-6xl font-semibold tracking-wide text-foreground/20">
-                    {fallData.first_name[0]}
-                    {fallData.last_name[0]}
-                  </span>
-                </div>
-              )}
-            </div>
+            <HeroPhotoBlock
+              heroPhotoUrl={fallData.hero_photo_url}
+              fullName={fullName}
+              firstName={fallData.first_name}
+              lastName={fallData.last_name}
+              canEdit={canEditFields}
+              fallenId={id}
+              candleCount={candleCount}
+              candleLit={currentUserLitCandle}
+            />
 
             {fallData.is_demo && (
               <Badge
@@ -436,33 +553,25 @@ export default async function FallenDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {profileDetails.length > 0 && (
-              <Card className="border border-border/50 bg-background/70 shadow-soft">
-                <CardHeader className="pb-4">
-                  <CardTitle>Профиль героя</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
-                  {profileDetails.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <div key={item.label} className="flex items-start gap-3">
-                        <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/12 text-primary">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                            {item.label}
-                          </p>
-                          <p className="text-sm font-medium text-foreground">
-                            {item.value}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </CardContent>
-              </Card>
-            )}
+            <ProfileEditor
+              fallenId={id}
+              initialData={{
+                first_name: fallData.first_name,
+                last_name: fallData.last_name,
+                middle_name: fallData.middle_name,
+                birth_date: fallData.birth_date,
+                death_date: fallData.death_date,
+                service_type: fallData.service_type,
+                service_start_date: fallData.service_start_date,
+                service_end_date: fallData.service_end_date,
+                rank: fallData.rank,
+                military_unit: fallData.military_unit,
+                hometown: fallData.hometown,
+                burial_location: fallData.burial_location,
+                hero_photo_url: fallData.hero_photo_url,
+              }}
+              canEdit={canEditFields}
+            />
           </div>
         </div>
       </section>
@@ -474,54 +583,9 @@ export default async function FallenDetailPage({ params }: PageProps) {
         availableAwards={availableAwards}
       />
 
-      {fallData.memorial_text && (
-        <section className="grid gap-6 lg:grid-cols-[1fr_minmax(0,320px)]">
-          <Card className="border border-border/50 bg-background/70 shadow-soft">
-            <CardHeader>
-              <CardTitle>Слова памяти</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg leading-relaxed text-foreground/80">
-                {fallData.memorial_text}
-              </p>
-            </CardContent>
-          </Card>
+      <MemorialTextSection fallenId={id} memorialText={fallData.memorial_text} />
 
-          <Card className="border border-primary/30 bg-gradient-to-br from-primary/10 via-background/60 to-background-soft/80 shadow-glow">
-            <CardContent className="flex h-full flex-col justify-between gap-6 py-6">
-              <div className="space-y-3">
-                <Badge variant="secondary" className="inline-flex w-max items-center gap-2 bg-primary text-primary-foreground">
-                  <Flame className="h-4 w-4" />
-                  Огонь памяти
-                </Badge>
-                <p className="text-sm text-primary/90">
-                  Оставьте своё воспоминание, чтобы имя героя звучало вечно. Истории близких
-                  помогают оживить хронику и вдохновляют новые поколения.
-                </p>
-              </div>
-              <a
-                href={`/fallen/${id}#comments`}
-                className="inline-flex items-center justify-center rounded-full border border-primary/40 bg-primary/20 px-5 py-2 text-sm font-semibold text-primary transition hover:bg-primary/30"
-              >
-                Оставить воспоминание
-              </a>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      {fallData.biography_md && (
-        <section>
-          <Card className="border border-border/50 bg-background/70 shadow-soft">
-            <CardHeader>
-              <CardTitle>Биография</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-memorial max-w-none text-foreground/90 prose-p:text-foreground/80 prose-headings:text-foreground">
-              <Markdown content={fallData.biography_md} />
-            </CardContent>
-          </Card>
-        </section>
-      )}
+      <BiographySection fallenId={id} biographyMd={fallData.biography_md} />
 
       <section>
         <TimelineWithForm items={timeline} fallenId={id} />
@@ -551,6 +615,28 @@ export default async function FallenDetailPage({ params }: PageProps) {
             <Comments comments={commentsTree} fallenId={id} />
           </CardContent>
         </Card>
+      </section>
+
+      {/* Модерация связей (только для владельцев, редакторов и модераторов) */}
+      {canEditFields && pendingConnections.length > 0 && (
+        <section>
+          <ConnectionModeration fallenId={id} pendingConnections={pendingConnections} />
+        </section>
+      )}
+
+      {/* Связи героя: родственники, друзья, сослуживцы */}
+      <section>
+        <HeroConnections
+          fallenId={id}
+          relatives={relatives as any}
+          friends={friends as any}
+          fellowSoldiers={fellowSoldiers as any}
+        />
+      </section>
+
+      {/* Список зажжённых свечей памяти */}
+      <section>
+        <CandleLightsList lights={candleLights as any} totalCount={candleCount} />
       </section>
     </div>
   )

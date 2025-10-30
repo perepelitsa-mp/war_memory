@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 
 const heroProfileSchema = z.object({
@@ -18,6 +19,7 @@ const heroProfileSchema = z.object({
   middle_name: z.string().optional(),
   birth_date: z.string().optional(),
   death_date: z.string().optional(),
+  service_type: z.enum(['mobilized', 'volunteer', 'pmc', 'professional']).optional(),
   rank: z.string().optional(),
   military_unit: z.string().optional(),
   hometown: z.string().optional(),
@@ -254,6 +256,25 @@ export function EditHeroProfile({ initialData, onSave, onCancel }: EditHeroProfi
                 disabled={loading}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="service_type">Вид службы</Label>
+            <Select
+              disabled={loading}
+              onValueChange={(value) => setValue('service_type', value as any)}
+              defaultValue={initialData?.service_type}
+            >
+              <SelectTrigger id="service_type">
+                <SelectValue placeholder="Выберите вид службы" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mobilized">Мобилизован</SelectItem>
+                <SelectItem value="volunteer">Доброволец</SelectItem>
+                <SelectItem value="pmc">ЧВК</SelectItem>
+                <SelectItem value="professional">Кадровый военнослужащий</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

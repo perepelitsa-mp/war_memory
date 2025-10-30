@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   Filter,
   ImageIcon,
   Milestone,
@@ -29,10 +31,15 @@ import {
 import { Timeline, ExtendedTimelineItem } from "@/components/fallen/Timeline";
 import { cn } from "@/lib/utils";
 import { useCanDeleteContent } from "@/hooks/useCanDeleteContent";
+import { useConfirmDialog } from "@/components/ui/alert-dialog-custom";
 
 const MAX_WORDS = 500;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+// Константы для сворачивания хроники
+const INITIAL_ITEMS_TO_SHOW = 5;
+const MIN_ITEMS_FOR_COLLAPSE = 7;
 
 export type TimelineWithFormProps = {
   items: TimelineItem[];
@@ -109,6 +116,7 @@ const getDescriptionCandidate = (item: ExtendedTimelineItem) => {
 export function TimelineWithForm({ items, fallenId, className }: TimelineWithFormProps) {
   const router = useRouter();
   const { canDelete } = useCanDeleteContent(fallenId);
+  const { confirm, alert } = useConfirmDialog();
 
   const [timelineItems, setTimelineItems] = useState<ExtendedTimelineItem[]>(() =>
     sortTimelineItems(items as ExtendedTimelineItem[]),
@@ -116,6 +124,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDecade, setSelectedDecade] = useState<string>("all");
   const [onlyWithMedia, setOnlyWithMedia] = useState(false);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ExtendedTimelineItem | null>(null);
@@ -129,6 +138,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timelineBlockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setTimelineItems(sortTimelineItems(items as ExtendedTimelineItem[]));
@@ -348,13 +358,16 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
   };
 
   const handleDelete = async (item: ExtendedTimelineItem) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm(
-        "Удалить событие из хроники? Его всегда можно добавить заново при необходимости.",
-      );
-      if (!confirmed) {
-        return;
-      }
+    const confirmed = await confirm({
+      title: "Удалить событие",
+      description: "Удалить событие из хроники? Его всегда можно добавить заново при необходимости.",
+      confirmText: "Удалить",
+      cancelText: "Отмена",
+      variant: "destructive",
+    });
+
+    if (!confirmed) {
+      return;
     }
 
     try {
@@ -381,11 +394,14 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
       router.refresh();
     } catch (deleteError) {
       console.error("Error deleting timeline item:", deleteError);
-      alert(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Не удалось удалить событие. Попробуйте позже.",
-      );
+      await alert({
+        title: "Ошибка",
+        description:
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Не удалось удалить событие. Попробуйте позже.",
+        confirmText: "Закрыть",
+      });
     } finally {
       setDeletingId(null);
     }
@@ -502,22 +518,44 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
     setOnlyWithMedia(false);
   };
 
+  // Логика сворачивания хроники
+  const shouldShowCollapseButton = filteredItems.length > MIN_ITEMS_FOR_COLLAPSE;
+  const visibleItems = useMemo(() => {
+    if (hasActiveFilters || isTimelineExpanded || !shouldShowCollapseButton) {
+      return filteredItems;
+    }
+    return filteredItems.slice(0, INITIAL_ITEMS_TO_SHOW);
+  }, [filteredItems, hasActiveFilters, isTimelineExpanded, shouldShowCollapseButton]);
+
+  const handleExpandTimeline = () => {
+    setIsTimelineExpanded(true);
+  };
+
+  const handleCollapseTimeline = () => {
+    setIsTimelineExpanded(false);
+    // Плавная прокрутка к началу блока хроники
+    setTimeout(() => {
+      timelineBlockRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
   return (
     <Card
+      ref={timelineBlockRef}
       className={cn("border border-border/50 bg-background/80 shadow-soft backdrop-blur-sm", className)}
     >
       <CardHeader className="space-y-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                <CalendarClock className="h-5 w-5" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary sm:h-10 sm:w-10 sm:rounded-xl">
+                <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold text-foreground">
+                <CardTitle className="text-lg font-bold text-foreground sm:text-xl md:text-2xl">
                   Хроника жизни героя
                 </CardTitle>
-                <p className="mt-1 max-w-xl text-sm text-foreground/60">
+                <p className="mt-0.5 max-w-xl text-xs text-foreground/60 sm:mt-1 sm:text-sm">
                   Собирайте ключевые вехи пути: детство, учебу, службу, волонтёрство и совместные
                   победы. История станет понятной и живой для будущих поколений.
                 </p>
@@ -526,15 +564,15 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
 
             {canDelete && (
               <div className="flex flex-wrap gap-2">
-                <Button onClick={handleStartCreate} className="gap-2">
-                  <Plus className="h-4 w-4" />
+                <Button onClick={handleStartCreate} className="h-9 gap-1.5 text-sm sm:h-10 sm:gap-2 sm:text-base">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Добавить событие
                 </Button>
               </div>
             )}
           </div>
 
-          <div className="grid w-full grid-cols-2 gap-3 sm:max-w-sm">
+          <div className="grid w-full grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 lg:gap-4">
             {[
               { icon: Milestone, label: "Записей", value: formatNumber(stats.total) },
               { icon: ImageIcon, label: "С фото", value: formatNumber(stats.withMedia) },
@@ -547,17 +585,17 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
             ].map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
-                className="rounded-xl border border-border/40 bg-background-soft/70 p-3"
+                className="rounded-lg border border-border/40 bg-background-soft/70 p-2.5 sm:rounded-xl sm:p-3"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                    <Icon className="h-4 w-4" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary sm:h-9 sm:w-9">
+                    <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
+                  <div className="min-w-0 space-y-0.5 sm:space-y-1">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/50 sm:text-xs">
                       {label}
                     </p>
-                    <p className="text-sm font-semibold text-foreground">{value}</p>
+                    <p className="truncate text-xs font-semibold text-foreground sm:text-sm">{value}</p>
                   </div>
                 </div>
               </div>
@@ -640,54 +678,80 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         </div>
 
         {filteredItems.length > 0 ? (
-          <Timeline
-            items={filteredItems}
-            canManage={canDelete}
-            onEdit={canDelete ? handleStartEdit : undefined}
-            onDelete={canDelete ? handleDelete : undefined}
-            deletingId={deletingId}
-          />
+          <>
+            <Timeline
+              items={visibleItems}
+              canManage={canDelete}
+              onEdit={canDelete ? handleStartEdit : undefined}
+              onDelete={canDelete ? handleDelete : undefined}
+              deletingId={deletingId}
+            />
+
+            {shouldShowCollapseButton && !hasActiveFilters && (
+              <div className="mt-6 flex justify-center">
+                {!isTimelineExpanded ? (
+                  <Button
+                    onClick={handleExpandTimeline}
+                    variant="outline"
+                    className="h-10 gap-2 border-primary/30 bg-background/60 text-sm font-medium text-primary hover:bg-primary/10 hover:text-primary sm:h-11 sm:gap-2.5 sm:text-base"
+                  >
+                    <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Показать все {formatNumber(filteredItems.length)} событий хроники
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCollapseTimeline}
+                    variant="outline"
+                    className="h-10 gap-2 border-border/40 bg-background/60 text-sm font-medium text-foreground/70 hover:bg-background-soft hover:text-foreground sm:h-11 sm:gap-2.5 sm:text-base"
+                  >
+                    <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Свернуть хронику
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         ) : timelineItems.length > 0 ? (
-          <div className="space-y-4 rounded-2xl border border-dashed border-border/60 bg-background-soft/70 px-8 py-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Filter className="h-6 w-6" />
+          <div className="space-y-3 rounded-xl border border-dashed border-border/60 bg-background-soft/70 px-4 py-8 text-center sm:space-y-4 sm:rounded-2xl sm:px-8 sm:py-12">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary sm:h-12 sm:w-12">
+              <Filter className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">По параметрам ничего не найдено</h3>
-              <p className="mx-auto max-w-md text-sm leading-relaxed text-foreground/70">
+            <div className="space-y-1 sm:space-y-2">
+              <h3 className="text-base font-semibold text-foreground sm:text-lg">По параметрам ничего не найдено</h3>
+              <p className="mx-auto max-w-md text-xs leading-relaxed text-foreground/70 sm:text-sm">
                 Измените период или отключите фильтры, чтобы увидеть весь путь героя.
               </p>
             </div>
             <div className="flex justify-center">
-              <Button onClick={resetFilters} className="gap-2">
-                <Filter className="h-4 w-4" />
+              <Button onClick={resetFilters} className="h-9 gap-1.5 text-sm sm:h-10 sm:gap-2 sm:text-base">
+                <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Сбросить фильтры
               </Button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4 rounded-2xl border border-dashed border-border/60 bg-background-soft/70 px-8 py-12 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Milestone className="h-8 w-8" />
+          <div className="space-y-3 rounded-xl border border-dashed border-border/60 bg-background-soft/70 px-4 py-8 text-center sm:space-y-4 sm:rounded-2xl sm:px-8 sm:py-12">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-16 sm:w-16 sm:rounded-2xl">
+              <Milestone className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">
+            <div className="space-y-1 sm:space-y-2">
+              <h3 className="text-base font-semibold text-foreground sm:text-lg">
                 Начните хронику жизни героя
               </h3>
-              <p className="mx-auto max-w-md text-sm leading-relaxed text-foreground/70">
+              <p className="mx-auto max-w-md text-xs leading-relaxed text-foreground/70 sm:text-sm">
                 Опишите первые шаги и важные события. Каждая веха помогает наполнить историю живыми
                 деталями.
               </p>
             </div>
             {canDelete ? (
               <div className="flex justify-center">
-                <Button onClick={handleStartCreate} size="lg" className="gap-2">
-                  <Plus className="h-5 w-5" />
+                <Button onClick={handleStartCreate} size="lg" className="h-10 gap-1.5 text-sm sm:h-11 sm:gap-2 sm:text-base">
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                   Добавить первую запись
                 </Button>
               </div>
             ) : (
-              <p className="text-sm text-foreground/50">
+              <p className="text-xs text-foreground/50 sm:text-sm">
                 Когда появятся воспоминания, хроника станет доступна для просмотра.
               </p>
             )}

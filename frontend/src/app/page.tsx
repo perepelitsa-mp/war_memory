@@ -1,19 +1,112 @@
-﻿import { createClient } from '@/lib/supabase/server'
+﻿import NextDynamic from 'next/dynamic'
+import { createClient } from '@/lib/supabase/server'
 import { FallenCard } from '@/components/fallen/FallenCard'
+import { HeroesFilter } from '@/components/home/HeroesFilter'
+import { FallenCardSkeleton } from '@/components/fallen/FallenCardSkeleton'
 import { Fallen } from '@/types'
+
+// Dynamic import to prevent hydration errors (uses Math.random on client)
+const AnimatedHeroesCarousel = NextDynamic(
+  () => import('@/components/home/AnimatedHeroesCarousel').then(mod => ({ default: mod.AnimatedHeroesCarousel })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <FallenCardSkeleton key={i} />
+        ))}
+      </div>
+    )
+  }
+)
+
+const HeroMosaic = NextDynamic(
+  () => import('@/components/home/HeroMosaic').then(mod => ({ default: mod.HeroMosaic })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-3xl border border-border/40 bg-background-soft/50 p-8">
+        <div className="flex h-96 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+        </div>
+      </div>
+    )
+  }
+)
 
 export const dynamic = 'force-dynamic'
 
-export default async function HomePage() {
+interface HomePageProps {
+  searchParams: {
+    search?: string
+    city?: string
+    unit?: string
+  }
+}
+
+export default async function HomePage({ searchParams }: HomePageProps) {
   const supabase = await createClient()
 
-  const { data: fallen, error: fallenError } = await supabase
+  // Check if any filters are active
+  const hasActiveFilters = !!(
+    searchParams.search ||
+    searchParams.city ||
+    searchParams.unit
+  )
+
+  // Get unique military units for filter
+  const { data: allFallen } = await supabase
+    .from('fallen')
+    .select('military_unit')
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+    .not('military_unit', 'is', null)
+
+  const uniqueUnits = Array.from(
+    new Set((allFallen || []).map((f) => f.military_unit).filter(Boolean))
+  ).sort()
+
+  // Get statistics data (UNFILTERED - always shows total counts)
+  const { data: allFallenForStats, error: statsError } = await supabase
+    .from('fallen')
+    .select('hometown')
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+
+  const { count: totalFallenCount, error: countError } = await supabase
+    .from('fallen')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'approved')
+    .eq('is_deleted', false)
+
+  // Build filtered query for display
+  let query = supabase
     .from('fallen')
     .select('*')
     .eq('status', 'approved')
     .eq('is_deleted', false)
     .order('created_at', { ascending: false })
-    .limit(12)
+
+  // Apply filters from search params
+  if (searchParams.search) {
+    const searchTerm = `%${searchParams.search}%`
+    query = query.or(
+      `first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},middle_name.ilike.${searchTerm}`
+    )
+  }
+
+  if (searchParams.city) {
+    query = query.eq('hometown', searchParams.city)
+  }
+
+  if (searchParams.unit) {
+    query = query.eq('military_unit', searchParams.unit)
+  }
+
+  // No limit for carousel - load all heroes for random rotation
+  // Filtered results will show all matches
+
+  const { data: fallen, error: fallenError } = await query
 
   const { count: usersCount, error: usersError } = await supabase
     .from('users')
@@ -28,76 +121,133 @@ export default async function HomePage() {
     console.error('Error counting users:', usersError)
   }
 
-  const fallenList = (fallen || []) as Fallen[]
-  const uniqueHometownsCount = new Set(
-    fallenList.map((item) => item.hometown).filter(Boolean),
-  ).size
+  if (statsError) {
+    console.error('Error fetching stats:', statsError)
+  }
 
+  if (countError) {
+    console.error('Error counting fallen:', countError)
+  }
+
+  // Filtered list for display
+  const fallenList = (fallen || []) as Fallen[]
+
+  // Statistics (UNFILTERED - always shows total)
+  const totalHeroesCount = totalFallenCount ?? 0
+  const uniqueHometownsCount = new Set(
+    (allFallenForStats || []).map((item) => item.hometown).filter(Boolean),
+  ).size
   const activeUsersCount = usersCount ?? 0
 
   return (
     <div className="container py-8 md:py-12">
       {/* Hero Section */}
-      <section className="mb-12 text-center">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
+      <section className="mb-8 text-center sm:mb-12">
+        <div className="mx-auto max-w-3xl px-4">
+          <h1 className="mb-3 text-3xl font-bold tracking-tight sm:mb-4 sm:text-4xl md:text-5xl">
             Память героев
           </h1>
-          <p className="text-lg text-muted-foreground md:text-xl">
+          <p className="text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
             Цифровой мемориал собирает истории павших защитников, чтобы память
             жила в каждом доме и оставалась частью нашей общей истории. Страна обязана знать своих Героев.
           </p>
 
           {/* Акцентный маркер раздела */}
-          <div className="mx-auto mt-6 h-2 w-32 rounded-full bg-ribbon-gradient" />
+          <div className="mx-auto mt-4 h-1.5 w-24 rounded-full bg-ribbon-gradient sm:mt-6 sm:h-2 sm:w-32" />
         </div>
       </section>
 
       {/* Stats */}
-      <section className="mb-12">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg border bg-card p-6 text-center">
-            <div className="text-3xl font-bold text-primary">{fallenList.length}</div>
-            <div className="mt-1 text-sm text-muted-foreground">героев в мемориале</div>
+      <section className="mb-8 sm:mb-12">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
+          <div className="rounded-lg border bg-card p-4 text-center sm:p-6">
+            <div className="text-2xl font-bold text-primary sm:text-3xl">{totalHeroesCount}</div>
+            <div className="mt-1 text-xs text-muted-foreground sm:text-sm">героев в мемориале</div>
           </div>
-          <div className="rounded-lg border bg-card p-6 text-center">
-            <div className="text-3xl font-bold text-primary">{uniqueHometownsCount}</div>
-            <div className="mt-1 text-sm text-muted-foreground">городов уже поделились историями</div>
+          <div className="rounded-lg border bg-card p-4 text-center sm:p-6">
+            <div className="text-2xl font-bold text-primary sm:text-3xl">{uniqueHometownsCount}</div>
+            <div className="mt-1 text-xs text-muted-foreground sm:text-sm">городов уже поделились историями</div>
           </div>
-          <div className="rounded-lg border bg-card p-6 text-center">
-            <div className="text-3xl font-bold text-primary">{activeUsersCount}</div>
-            <div className="mt-1 text-sm text-muted-foreground">зарегистрированных пользователей</div>
+          <div className="rounded-lg border bg-card p-4 text-center sm:p-6">
+            <div className="text-2xl font-bold text-primary sm:text-3xl">{activeUsersCount}</div>
+            <div className="mt-1 text-xs text-muted-foreground sm:text-sm">зарегистрированных пользователей</div>
           </div>
         </div>
       </section>
 
-      {/* Cards Grid */}
+      {/* Filter */}
+      <section className="mb-8">
+        <HeroesFilter
+          initialSearch={searchParams.search}
+          initialCity={searchParams.city}
+          initialUnit={searchParams.unit}
+          availableUnits={uniqueUnits}
+        />
+      </section>
+
+      {/* Cards Grid / Animated Carousel */}
       <section>
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Последние истории</h2>
-          {/* TODO: добавить фильтры и поиск по героям */}
+        <div className="mb-4 flex flex-col gap-2 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold sm:text-2xl">
+            {hasActiveFilters ? 'Результаты поиска' : 'Истории памяти'}
+          </h2>
+          {hasActiveFilters && fallenList.length > 0 && (
+            <p className="text-xs text-muted-foreground sm:text-sm">
+              Найдено: {fallenList.length}
+            </p>
+          )}
         </div>
 
         {fallenList.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-12 text-center">
-            <p className="text-lg text-muted-foreground">
-              Здесь пока нет опубликованных историй.
+          <div className="rounded-lg border border-dashed p-6 text-center sm:p-12">
+            <p className="text-base text-muted-foreground sm:text-lg">
+              {hasActiveFilters
+                ? 'По вашему запросу ничего не найдено.'
+                : 'Здесь пока нет опубликованных историй.'}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Поделитесь историей своей семьи, и она станет частью живого мемориала.
+            <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+              {hasActiveFilters
+                ? 'Попробуйте изменить параметры поиска или сбросить фильтры.'
+                : 'Поделитесь историей своей семьи, и она станет частью живого мемориала.'}
             </p>
           </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        ) : hasActiveFilters ? (
+          // Filtered list view
+          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {fallenList.map((fallen) => (
               <FallenCard key={fallen.id} fallen={fallen} />
             ))}
           </div>
+        ) : (
+          // Animated carousel view
+          <AnimatedHeroesCarousel heroes={fallenList} maxVisible={4} rotationInterval={3000} />
         )}
       </section>
 
+      {/* Hero Mosaic Section */}
+      {!hasActiveFilters && fallenList.length > 0 && (
+        <section className="mt-12 sm:mt-16">
+          <div className="mb-6 text-center sm:mb-8">
+            <h2 className="mb-2 text-2xl font-bold tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
+              Лик Героя
+            </h2>
+            <p className="mx-auto max-w-2xl px-4 text-xs leading-relaxed text-muted-foreground sm:text-sm md:text-base">
+              Интерактивная стена памяти. Каждое фото — это история жизни и подвига.
+              Нажмите на фотографию, чтобы узнать больше о герое.
+            </p>
+            <div className="mx-auto mt-3 h-0.5 w-20 rounded-full bg-ribbon-gradient sm:mt-4 sm:h-1 sm:w-24" />
+          </div>
+
+          <HeroMosaic
+            heroes={fallenList}
+            gridSize={24}
+            rotationInterval={3000}
+          />
+        </section>
+      )}
+
       {/* CTA Section */}
-      <section className="relative mt-16 overflow-hidden rounded-3xl border border-border/60 bg-surface/80 p-8 text-center shadow-soft transition-colors md:p-12">
+      <section className="relative mt-12 overflow-hidden rounded-2xl border border-border/60 bg-surface/80 p-6 text-center shadow-soft transition-colors sm:mt-16 sm:rounded-3xl sm:p-8 md:p-12">
         <div
           className="pointer-events-none absolute inset-0 opacity-80 mix-blend-soft-light"
           aria-hidden="true"
@@ -105,17 +255,17 @@ export default async function HomePage() {
           <div className="h-full w-full bg-[radial-gradient(circle_at_15%_10%,hsl(var(--glow)/0.25),transparent_45%),radial-gradient(circle_at_80%_0%,hsl(var(--primary)/0.18),transparent_45%),radial-gradient(circle_at_50%_95%,hsl(var(--secondary)/0.2),transparent_60%)]" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl space-y-4 text-balance">
-          <h2 className="font-serif text-2xl font-semibold text-foreground md:text-3xl">
+        <div className="relative mx-auto max-w-3xl space-y-3 text-balance sm:space-y-4">
+          <h2 className="font-serif text-xl font-semibold text-foreground sm:text-2xl md:text-3xl">
             Помогите сохранить память
           </h2>
-          <p className="mx-auto text-sm leading-relaxed text-foreground/70 md:text-base">
+          <p className="mx-auto text-xs leading-relaxed text-foreground/70 sm:text-sm md:text-base">
             Если ваш родственник погиб в ходе СВО, вы можете создать карточку памяти. Это поможет
             сохранить историю героя и передать её будущим поколениям.
           </p>
           <a
             href="/fallen/create"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-8 text-sm font-semibold uppercase tracking-[0.2em] text-primary-foreground shadow-glow ring-offset-background transition-all hover:-translate-y-0.5 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-6 text-xs font-semibold uppercase tracking-[0.15em] text-primary-foreground shadow-glow ring-offset-background transition-all hover:-translate-y-0.5 hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:h-11 sm:px-8 sm:text-sm sm:tracking-[0.2em]"
           >
             Создать карточку героя
           </a>

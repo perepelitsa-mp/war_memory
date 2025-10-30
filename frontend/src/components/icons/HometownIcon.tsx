@@ -1,0 +1,47 @@
+import { SVGProps } from 'react'
+
+interface HometownIconProps extends SVGProps<SVGSVGElement> {
+  className?: string
+}
+
+export function HometownIcon({ className, ...props }: HometownIconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      {...props}
+    >
+      <defs>
+        <linearGradient id="homeGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#FF8C00" />
+          <stop offset="1" stopColor="#C06000" />
+        </linearGradient>
+      </defs>
+
+      {/* House silhouette */}
+      <path
+        d="M6 12l6-5 6 5v6a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-6z"
+        stroke="url(#homeGrad)"
+        strokeWidth="1.8"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 20v-5h4v5"
+        stroke="url(#homeGrad)"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+
+      {/* Star above the roof */}
+      <path
+        d="M12 4.5l.7 1.4 1.5.2-1.1 1.1.25 1.6-1.35-.8-1.35.8.25-1.6-1.1-1.1 1.5-.2.7-1.4z"
+        fill="url(#homeGrad)"
+      />
+    </svg>
+  )
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MoonStar, SunMedium } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,12 @@ type ThemeToggleProps = {
 export function ThemeToggle({ className, layout = 'icon' }: ThemeToggleProps) {
   const { mode, toggle } = useTheme();
   const isDay = mode === 'day';
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by not rendering icon until mounted on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
@@ -27,33 +34,38 @@ export function ThemeToggle({ className, layout = 'icon' }: ThemeToggleProps) {
     >
       <span className="absolute inset-0 -z-[1] bg-gradient-to-tr from-primary/15 via-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-      <AnimatePresence initial={false} mode="wait">
-        {isDay ? (
-          <motion.span
-            key="sun"
-            className="relative flex items-center gap-2"
-            initial={{ opacity: 0, y: 8, rotate: -8 }}
-            animate={{ opacity: 1, y: 0, rotate: 0 }}
-            exit={{ opacity: 0, y: -8, rotate: 8 }}
-            transition={{ duration: 0.34, ease: [0.33, 1, 0.68, 1] }}
-          >
-            <SunMedium className="h-5 w-5 text-primary drop-shadow" />
-            {layout === 'label' && <span>Дневной режим</span>}
-          </motion.span>
-        ) : (
-          <motion.span
-            key="moon"
-            className="relative flex items-center gap-2"
-            initial={{ opacity: 0, y: 8, rotate: 8 }}
-            animate={{ opacity: 1, y: 0, rotate: 0 }}
-            exit={{ opacity: 0, y: -8, rotate: -8 }}
-            transition={{ duration: 0.34, ease: [0.33, 1, 0.68, 1] }}
-          >
-            <MoonStar className="h-5 w-5 text-accent drop-shadow" />
-            {layout === 'label' && <span>Ночной режим</span>}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {mounted ? (
+        <AnimatePresence initial={false} mode="wait">
+          {isDay ? (
+            <motion.span
+              key="sun"
+              className="relative flex items-center gap-2"
+              initial={{ opacity: 0, y: 8, rotate: -8 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              exit={{ opacity: 0, y: -8, rotate: 8 }}
+              transition={{ duration: 0.34, ease: [0.33, 1, 0.68, 1] }}
+            >
+              <SunMedium className="h-5 w-5 text-primary drop-shadow" />
+              {layout === 'label' && <span>Дневной режим</span>}
+            </motion.span>
+          ) : (
+            <motion.span
+              key="moon"
+              className="relative flex items-center gap-2"
+              initial={{ opacity: 0, y: 8, rotate: 8 }}
+              animate={{ opacity: 1, y: 0, rotate: 0 }}
+              exit={{ opacity: 0, y: -8, rotate: -8 }}
+              transition={{ duration: 0.34, ease: [0.33, 1, 0.68, 1] }}
+            >
+              <MoonStar className="h-5 w-5 text-accent drop-shadow" />
+              {layout === 'label' && <span>Ночной режим</span>}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      ) : (
+        // Placeholder during SSR to prevent hydration mismatch
+        <span className="h-5 w-5" />
+      )}
 
       <span
         aria-hidden

@@ -3,7 +3,7 @@ import { Inter, PT_Serif } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { ThemeProvider } from '@/components/theme/theme-provider';
+import { RootProviders } from '@/components/providers/RootProviders';
 
 const inter = Inter({
   subsets: ['latin', 'cyrillic'],
@@ -88,13 +88,13 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="relative min-h-screen overflow-x-hidden bg-background font-sans antialiased">
-        <ThemeProvider>
+        <RootProviders>
           <div className="relative flex min-h-screen flex-col overflow-x-hidden">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
-        </ThemeProvider>
+        </RootProviders>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImagePlus, Loader2 } from 'lucide-react'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface AddPhotoToGalleryDialogProps {
   open: boolean
@@ -21,6 +22,7 @@ export function AddPhotoToGalleryDialog({
   fallenId,
   onSuccess,
 }: AddPhotoToGalleryDialogProps) {
+  const { alert } = useConfirmDialog()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
   const [caption, setCaption] = useState('')
@@ -34,7 +36,11 @@ export function AddPhotoToGalleryDialog({
     e.preventDefault()
 
     if (!selectedFiles || selectedFiles.length === 0) {
-      alert('Выберите хотя бы одну фотографию')
+      await alert({
+        title: 'Выберите фотографии',
+        description: 'Выберите хотя бы одну фотографию',
+        confirmText: 'Понятно',
+      })
       return
     }
 
@@ -72,7 +78,11 @@ export function AddPhotoToGalleryDialog({
       }
     } catch (error) {
       console.error('Error uploading photos:', error)
-      alert(error instanceof Error ? error.message : 'Не удалось загрузить фотографии')
+      await alert({
+        title: 'Ошибка',
+        description: error instanceof Error ? error.message : 'Не удалось загрузить фотографии',
+        confirmText: 'Закрыть',
+      })
     } finally {
       setIsSubmitting(false)
     }

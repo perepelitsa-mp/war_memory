@@ -16,6 +16,7 @@ import {
 import { ImagePlus, X, Loader2, AlertCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MemoryItemWithDetails } from '@/types'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface EditMemoryFormProps {
   open: boolean
@@ -29,6 +30,7 @@ const MAX_WORDS = 3000
 const MAX_PHOTOS = 10
 
 export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess }: EditMemoryFormProps) {
+  const { confirm } = useConfirmDialog()
   const [title, setTitle] = useState(memory.title || '')
   const [content, setContent] = useState(memory.content_md || '')
   const [existingPhotos, setExistingPhotos] = useState<any[]>(memory.media || [])
@@ -169,7 +171,7 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     const hasChanges =
       title !== memory.title ||
       content !== memory.content_md ||
@@ -181,7 +183,15 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
       return
     }
 
-    if (confirm('Вы уверены, что хотите отменить редактирование? Все изменения будут потеряны.')) {
+    const confirmed = await confirm({
+      title: 'Отменить редактирование',
+      description: 'Вы уверены, что хотите отменить редактирование? Все изменения будут потеряны.',
+      confirmText: 'Отменить',
+      cancelText: 'Продолжить редактирование',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       setTitle(memory.title || '')
       setContent(memory.content_md || '')
       setExistingPhotos(memory.media || [])

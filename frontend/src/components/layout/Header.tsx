@@ -40,23 +40,23 @@ export function Header() {
       }}
     >
       <div className="relative border-b border-border/60 bg-background/70">
-        <div className="container flex h-20 items-center justify-between gap-6">
-          <Link href="/" className="relative flex items-center gap-3">
-            <span className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-ribbon-orange via-primary/90 to-ribbon-black shadow-soft">
-              <Flame className="h-6 w-6 text-white drop-shadow-md" />
-              <span className="absolute -inset-[2px] rounded-[14px] border border-white/10" />
+        <div className="container flex h-16 items-center justify-between gap-3 sm:gap-4">
+          <Link href="/" className="relative flex items-center gap-2 sm:gap-2.5">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ribbon-orange via-primary/90 to-ribbon-black shadow-soft sm:h-10 sm:w-10">
+              <Flame className="h-4 w-4 text-white drop-shadow-md sm:h-5 sm:w-5" />
+              <span className="absolute -inset-[2px] rounded-[10px] border border-white/10" />
             </span>
             <div className="flex flex-col">
-              <span className="text-sm uppercase tracking-[0.4em] text-primary/90">
+              <span className="hidden text-[10px] uppercase tracking-[0.3em] text-primary/90 lg:block">
                 Цифровой мемориал
               </span>
-              <span className="font-serif text-xl font-semibold leading-tight text-foreground">
+              <span className="font-serif text-base font-semibold leading-tight text-foreground sm:text-lg">
                 Память героев
               </span>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden items-center gap-4 lg:flex xl:gap-6">
             {navItems.map((item) => {
               const isActive =
                 item.href === '/'
@@ -68,7 +68,7 @@ export function Header() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'relative text-sm font-medium transition-colors duration-300 hover:text-foreground',
+                    'relative whitespace-nowrap text-sm font-medium transition-colors duration-300 hover:text-foreground',
                     isActive ? 'text-foreground' : 'text-foreground/60',
                   )}
                 >
@@ -85,63 +85,43 @@ export function Header() {
                 </Link>
               );
             })}
-            {/* {hasRole && (
-              <Link
-                href="/admin/moderation"
-                className={cn(
-                  'relative flex items-center gap-2 text-sm font-medium transition-colors duration-300 hover:text-foreground',
-                  pathname.startsWith('/admin/moderation')
-                    ? 'text-foreground'
-                    : 'text-foreground/60',
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                <span className="relative inline-flex items-center">
-                  Модерация
-                  {pathname.startsWith('/admin/moderation') && (
-                    <motion.span
-                      layoutId="nav-pill"
-                      className="absolute -bottom-2 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary via-accent to-glow shadow-glow"
-                      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-                    />
-                  )}
-                </span>
-              </Link>
-            )} */}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle className="hidden md:flex" />
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <ThemeToggle className="hidden lg:flex" />
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="h-9 w-9 lg:hidden"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <AuthButton variant="ghost" size="sm" className="hidden md:flex" />
+            <AuthButton variant="ghost" size="sm" className="hidden lg:flex" />
             {hasRole && (
               <Button
                 size="sm"
                 variant="outline"
-                className="hidden gap-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 md:inline-flex"
+                className="hidden gap-1.5 border-primary/20 bg-primary/5 px-2.5 text-primary hover:bg-primary/10 lg:inline-flex xl:px-3"
                 asChild
               >
                 <Link href="/admin/moderation">
-                  <Shield className="h-4 w-4" />
-                  Модерация
+                  <Shield className="h-3.5 w-3.5" />
+                  <span className="hidden xl:inline">Модерация</span>
                 </Link>
               </Button>
             )}
             <Button
               size="sm"
-              className="hidden shadow-glow transition hover:-translate-y-0.5 md:inline-flex"
+              className="hidden gap-1.5 px-2.5 shadow-glow transition hover:-translate-y-0.5 lg:inline-flex xl:px-3"
               asChild
             >
-              <Link href="/fallen/create">Добавить историю</Link>
+              <Link href="/fallen/create">
+                <Flame className="h-3.5 w-3.5" />
+                <span className="hidden xl:inline">Добавить историю</span>
+              </Link>
             </Button>
           </div>
         </div>
@@ -157,13 +137,13 @@ export function Header() {
         initial={false}
         animate={mobileMenuOpen ? 'open' : 'closed'}
         variants={{
-          open: { height: 'auto', opacity: 1 },
-          closed: { height: 0, opacity: 0 },
+          open: { height: 'auto', opacity: 1, overflow: 'visible', pointerEvents: 'auto' },
+          closed: { height: 0, opacity: 0, overflow: 'hidden', pointerEvents: 'none' },
         }}
         transition={{ duration: 0.32, ease: [0.45, 0, 0.55, 1] }}
-        className="md:hidden"
+        className="lg:hidden"
       >
-        <div className="space-y-4 border-b border-border/50 bg-background/90 px-6 py-5 backdrop-blur">
+        <div className="space-y-3 border-b border-border/50 bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
           {navItems.map((item) => {
             const isActive =
               item.href === '/'
@@ -175,7 +155,7 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center justify-between rounded-xl border border-border/40 px-4 py-3 text-base font-medium transition duration-300',
+                  'flex items-center justify-between rounded-lg border border-border/40 px-3.5 py-2.5 text-sm font-medium transition duration-300',
                   isActive
                     ? 'bg-surface/60 text-foreground shadow-soft'
                     : 'bg-background/60 text-foreground/70 hover:bg-surface/40 hover:text-foreground',
@@ -184,7 +164,7 @@ export function Header() {
               >
                 <span>{item.label}</span>
                 <motion.span
-                  className="h-2 w-2 rounded-full bg-primary"
+                  className="h-1.5 w-1.5 rounded-full bg-primary"
                   initial={false}
                   animate={{ scale: isActive ? 1 : 0, opacity: isActive ? 1 : 0 }}
                   transition={{ duration: 0.2 }}
@@ -196,7 +176,7 @@ export function Header() {
             <Link
               href="/admin/moderation"
               className={cn(
-                'flex items-center justify-between rounded-xl border border-border/40 px-4 py-3 text-base font-medium transition duration-300',
+                'flex items-center justify-between rounded-lg border border-border/40 px-3.5 py-2.5 text-sm font-medium transition duration-300',
                 pathname.startsWith('/admin/moderation')
                   ? 'bg-surface/60 text-foreground shadow-soft'
                   : 'bg-background/60 text-foreground/70 hover:bg-surface/40 hover:text-foreground',
@@ -208,7 +188,7 @@ export function Header() {
                 Модерация
               </span>
               <motion.span
-                className="h-2 w-2 rounded-full bg-primary"
+                className="h-1.5 w-1.5 rounded-full bg-primary"
                 initial={false}
                 animate={{
                   scale: pathname.startsWith('/admin/moderation') ? 1 : 0,
@@ -218,29 +198,15 @@ export function Header() {
               />
             </Link>
           )}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-2.5 pt-1">
             <ThemeToggle layout="label" className="flex-1" />
             <AuthButton variant="ghost" size="sm" className="flex-1" />
           </div>
-          {hasRole && (
-            <Button
-              size="lg"
-              variant="outline"
-              className="w-full justify-between gap-2 border-primary/20 bg-primary/5 text-base font-semibold tracking-wide text-primary"
-              asChild
-            >
-              <Link href="/admin/moderation" onClick={() => setMobileMenuOpen(false)}>
-                <span>Модерация</span>
-                <Shield className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
           <Button
-            size="lg"
-            className="w-full justify-between gap-2 bg-gradient-to-br from-ribbon-orange via-primary to-ribbon-black text-base font-semibold tracking-wide shadow-glow transition"
+            className="w-full justify-between gap-2 bg-gradient-to-br from-ribbon-orange via-primary to-ribbon-black text-sm font-semibold shadow-glow transition"
             asChild
           >
-            <Link href="/fallen/create">
+            <Link href="/fallen/create" onClick={() => setMobileMenuOpen(false)}>
               <span>Зажечь свечу памяти</span>
               <Flame className="h-4 w-4" />
             </Link>

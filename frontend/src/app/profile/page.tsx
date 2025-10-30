@@ -1,157 +1,143 @@
-'use client';
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { ProfileForm } from '@/components/profile/ProfileForm'
+import { AvatarUpload } from '@/components/profile/AvatarUpload'
+import { PasswordChange } from '@/components/profile/PasswordChange'
+import { UserConnections } from '@/components/profile/UserConnections'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { User, Shield, Link2 } from 'lucide-react'
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { CardItem } from '@/components/profile/CardItem';
-import { Loader2, Plus, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+export const dynamic = 'force-dynamic'
 
-interface Card {
-  id: string;
-  first_name: string;
-  last_name: string;
-  middle_name: string | null;
-  birth_date: string | null;
-  death_date: string | null;
-  rank: string | null;
-  hero_photo_url: string | null;
-  status: string;
-  created_at: string;
-  pendingCounts: {
-    timeline: number;
-    memory: number;
-    comments: number;
-    total: number;
-  };
-}
+export default async function ProfilePage() {
+  const supabase = await createClient()
 
-export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchCards = async () => {
-      try {
-        const response = await fetch('/api/profile/my-cards');
-        if (!response.ok) {
-          throw new Error('Не удалось загрузить карточки');
-        }
-        const data = await response.json();
-        setCards(data.cards || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCards();
-  }, [user]);
-
-  if (authLoading || loading) {
-    return (
-      <div className="container flex min-h-[60vh] items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return null;
+    redirect('/auth/signin')
   }
 
+  // Получаем данные пользователя
+  const { data: userData } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  // Получаем связи с героями
+  const { data: connections } = await supabase
+    .from('hero_connections')
+    .select(
+      `
+      id,
+      connection_type,
+      relationship,
+      description,
+      status,
+      created_at,
+      fallen:fallen(id, first_name, last_name, middle_name, hero_photo_url, birth_date, death_date)
+    `
+    )
+    .eq('user_id', user.id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
   return (
-    <div className="container py-12">
-      <div className="mx-auto max-w-6xl">
-        {/* Заголовок */}
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <User className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">Личный кабинет</h1>
-              <p className="text-muted-foreground">{user.email}</p>
-            </div>
-          </div>
-          <Button asChild className="gap-2">
-            <Link href="/fallen/create">
-              <Plus className="h-5 w-5" />
-              Создать карточку
-            </Link>
-          </Button>
+    <div className="container space-y-8 py-10 md:py-16">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Личный кабинет</h1>
+        <p className="text-muted-foreground">
+          Управляйте своим профилем и связями с героями мемориала
+        </p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
+        {/* Main Content */}
+        <div className="space-y-8">
+          {/* Profile Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Профиль
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <AvatarUpload
+                currentAvatarUrl={userData?.avatar_url}
+                userName={userData?.full_name || 'Пользователь'}
+              />
+              <ProfileForm
+                initialData={{
+                  full_name: userData?.full_name || '',
+                  phone: userData?.phone || '',
+                  bio: userData?.bio || '',
+                  show_phone: userData?.show_phone || false,
+                  whatsapp_link: userData?.whatsapp_link || '',
+                  show_whatsapp: userData?.show_whatsapp || false,
+                  telegram_link: userData?.telegram_link || '',
+                  show_telegram: userData?.show_telegram || false,
+                  vk_link: userData?.vk_link || '',
+                  show_vk: userData?.show_vk || false,
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Password Change */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Безопасность
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PasswordChange />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Карточки */}
-        <div className="rounded-2xl border border-border bg-surface p-6">
-          <h2 className="mb-6 text-2xl font-semibold">Мои карточки</h2>
+        {/* Sidebar */}
+        <div className="space-y-8">
+          {/* Connections */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Связи с героями
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UserConnections connections={connections || []} />
+            </CardContent>
+          </Card>
 
-          {error && (
-            <div className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          {cards.length === 0 && !error && (
-            <div className="py-12 text-center">
-              <User className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
-              <h3 className="mb-2 text-lg font-medium">У вас пока нет карточек</h3>
-              <p className="mb-6 text-muted-foreground">
-                Создайте первую карточку памяти о погибшем герое
-              </p>
-              <Button asChild>
-                <Link href="/fallen/create">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Создать карточку
-                </Link>
-              </Button>
-            </div>
-          )}
-
-          {cards.length > 0 && (
-            <div className="space-y-4">
-              {cards.map((card) => (
-                <CardItem key={card.id} card={card} />
-              ))}
-            </div>
-          )}
+          {/* User Info */}
+          <Card className="border-border/40 bg-background/50">
+            <CardContent className="space-y-2 pt-6">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Email:</span>
+                <p className="font-medium">{user.email}</p>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Роль:</span>
+                <p className="font-medium capitalize">{userData?.role || 'user'}</p>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Дата регистрации:</span>
+                <p className="font-medium">
+                  {new Date(user.created_at).toLocaleDateString('ru-RU')}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Статистика */}
-        {cards.length > 0 && (
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <div className="text-3xl font-bold text-primary">{cards.length}</div>
-              <div className="text-sm text-muted-foreground">Всего карточек</div>
-            </div>
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <div className="text-3xl font-bold text-orange-600">
-                {cards.reduce((sum, card) => sum + card.pendingCounts.timeline, 0)}
-              </div>
-              <div className="text-sm text-muted-foreground">События на модерации</div>
-            </div>
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <div className="text-3xl font-bold text-blue-600">
-                {cards.reduce((sum, card) => sum + card.pendingCounts.memory, 0)}
-              </div>
-              <div className="text-sm text-muted-foreground">Воспоминания на модерации</div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
-  );
+  )
 }

@@ -25,6 +25,7 @@ interface Fallen {
   middle_name: string | null;
   birth_date: string | null;
   death_date: string | null;
+  service_type: 'mobilized' | 'volunteer' | 'pmc' | 'professional' | null;
   rank: string | null;
   military_unit: string | null;
   call_sign: string | null;

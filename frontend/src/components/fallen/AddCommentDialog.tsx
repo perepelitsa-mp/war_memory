@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
 
 interface AddCommentDialogProps {
   open: boolean
@@ -35,6 +36,7 @@ export function AddCommentDialog({
   parentId,
   onSuccess,
 }: AddCommentDialogProps) {
+  const { confirm } = useConfirmDialog()
   const [content, setContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,13 +93,21 @@ export function AddCommentDialog({
     }
   }
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!content) {
       onOpenChange(false)
       return
     }
 
-    if (confirm('Вы уверены? Все введённые данные будут потеряны.')) {
+    const confirmed = await confirm({
+      title: 'Отменить добавление комментария',
+      description: 'Вы уверены? Все введённые данные будут потеряны.',
+      confirmText: 'Отменить',
+      cancelText: 'Продолжить редактирование',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       setContent('')
       setError(null)
       onOpenChange(false)

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadedMediaIds: string[] = [];
+    const uploadedMedia: any[] = [];
     const maxSize = 10 * 1024 * 1024; // 10 MB
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           alt_text: altText || file.name,
           caption: caption || null,
         })
-        .select('id')
+        .select('*')
         .single();
 
       if (mediaError) {
@@ -118,10 +118,10 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      uploadedMediaIds.push(mediaRecord.id);
+      uploadedMedia.push(mediaRecord);
     }
 
-    if (uploadedMediaIds.length === 0) {
+    if (uploadedMedia.length === 0) {
       return NextResponse.json(
         { error: 'No files were uploaded successfully' },
         { status: 400 }
@@ -130,8 +130,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      mediaIds: uploadedMediaIds,
-      count: uploadedMediaIds.length,
+      uploaded: uploadedMedia,
+      mediaIds: uploadedMedia.map(m => m.id), // Для обратной совместимости
+      count: uploadedMedia.length,
     });
   } catch (error) {
     console.error('Unexpected error uploading photos:', error);
