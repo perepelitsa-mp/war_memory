@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       // Генерируем уникальное имя файла
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${fallenId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       // Загружаем файл в Storage
       const { data: uploadData, error: uploadError } = await supabase.storage

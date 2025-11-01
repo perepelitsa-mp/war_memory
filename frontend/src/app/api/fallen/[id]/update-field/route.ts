@@ -13,6 +13,7 @@ const ALLOWED_FIELDS = [
   'service_end_date',
   'rank',
   'military_unit',
+  'vus_id',
   'hometown',
   'burial_location',
   'hero_photo_url',
@@ -96,6 +97,15 @@ export async function PATCH(
       if (value && !validServiceTypes.includes(value)) {
         return NextResponse.json({ error: 'Invalid service type' }, { status: 400 })
       }
+    }
+
+    if (field === 'vus_id') {
+      // Validate UUID format or null
+      if (value !== null && value !== '' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+        return NextResponse.json({ error: 'Invalid VUS ID format' }, { status: 400 })
+      }
+      // Convert empty string to null
+      processedValue = value || null
     }
 
     // Update the field

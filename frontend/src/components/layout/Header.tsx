@@ -12,10 +12,18 @@ import { AuthButton } from '@/components/auth/AuthButton';
 import { useHasRole } from '@/hooks/useAdminAuth';
 import { Badge } from '@/components/ui/badge';
 
-const navItems = [
-  { href: '/', label: 'Главная' },
-  { href: '/about', label: 'О мемориале' },
-  { href: '/map', label: 'Карта памяти' },
+interface NavItem {
+  href: string;
+  label: string;
+  hideOnDesktop?: boolean;
+}
+
+const navItems: NavItem[] = [
+  { href: '/', label: 'Главная', hideOnDesktop: true }, // Логотип уже ведет на главную
+  { href: '/about', label: 'О проекте' }, // Короче
+  { href: '/stats', label: 'Статистика' },
+  { href: '/education', label: 'Образование' },
+  { href: '/burial-map', label: 'Карта' }, // Сокращено
   { href: '/chronicles', label: 'Хроника' },
 ];
 
@@ -42,52 +50,55 @@ export function Header() {
       <div className="relative border-b border-border/60 bg-background/70">
         <div className="container flex h-16 items-center justify-between gap-3 sm:gap-4">
           <Link href="/" className="relative flex items-center gap-2 sm:gap-2.5">
-            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-ribbon-orange via-primary/90 to-ribbon-black shadow-soft sm:h-10 sm:w-10">
-              <Flame className="h-4 w-4 text-white drop-shadow-md sm:h-5 sm:w-5" />
-              <span className="absolute -inset-[2px] rounded-[10px] border border-white/10" />
-            </span>
+            <img
+              src="/images/logotype.webp"
+              alt="Логотип Память героев"
+              className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
+            />
             <div className="flex flex-col">
-              <span className="hidden text-[10px] uppercase tracking-[0.3em] text-primary/90 lg:block">
+              <span className="hidden text-[10px] uppercase tracking-[0.3em] text-primary/90 xl:block">
                 Цифровой мемориал
               </span>
-              <span className="font-serif text-base font-semibold leading-tight text-foreground sm:text-lg">
+              <span className="font-serif text-sm font-semibold leading-tight text-foreground sm:text-base lg:text-base xl:text-lg">
                 Память героев
               </span>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-4 lg:flex xl:gap-6">
-            {navItems.map((item) => {
-              const isActive =
-                item.href === '/'
-                  ? pathname === '/'
-                  : pathname.startsWith(item.href) && item.href !== '/';
+          <nav className="hidden items-center gap-3 lg:flex xl:gap-4">
+            {navItems
+              .filter((item) => !item.hideOnDesktop)
+              .map((item) => {
+                const isActive =
+                  item.href === '/'
+                    ? pathname === '/'
+                    : pathname.startsWith(item.href) && item.href !== '/';
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'relative whitespace-nowrap text-sm font-medium transition-colors duration-300 hover:text-foreground',
-                    isActive ? 'text-foreground' : 'text-foreground/60',
-                  )}
-                >
-                  <span className="relative inline-flex items-center">
-                    {item.label}
-                    {isActive && (
-                      <motion.span
-                        layoutId="nav-pill"
-                        className="absolute -bottom-2 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary via-accent to-glow shadow-glow"
-                        transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-                      />
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'relative whitespace-nowrap text-xs font-medium transition-colors duration-300 hover:text-foreground lg:text-[13px] xl:text-sm',
+                      isActive ? 'text-foreground' : 'text-foreground/60',
                     )}
-                  </span>
-                </Link>
-              );
-            })}
+                  >
+                    <span className="relative inline-flex items-center">
+                      {item.label}
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-pill"
+                          className="absolute -bottom-2 left-0 right-0 h-[2px] rounded-full bg-gradient-to-r from-primary via-accent to-glow shadow-glow"
+                          transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+                        />
+                      )}
+                    </span>
+                  </Link>
+                );
+              })}
           </nav>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <ThemeToggle className="hidden lg:flex" />
             <Button
               variant="ghost"
@@ -104,23 +115,23 @@ export function Header() {
               <Button
                 size="sm"
                 variant="outline"
-                className="hidden gap-1.5 border-primary/20 bg-primary/5 px-2.5 text-primary hover:bg-primary/10 lg:inline-flex xl:px-3"
+                className="hidden gap-1.5 border-primary/20 bg-primary/5 px-2 text-primary hover:bg-primary/10 lg:inline-flex xl:px-3"
                 asChild
               >
                 <Link href="/admin/moderation">
                   <Shield className="h-3.5 w-3.5" />
-                  <span className="hidden xl:inline">Модерация</span>
+                  <span className="hidden 2xl:inline">Модерация</span>
                 </Link>
               </Button>
             )}
             <Button
               size="sm"
-              className="hidden gap-1.5 px-2.5 shadow-glow transition hover:-translate-y-0.5 lg:inline-flex xl:px-3"
+              className="hidden gap-1.5 px-2 shadow-glow transition hover:-translate-y-0.5 lg:inline-flex xl:px-3"
               asChild
             >
               <Link href="/fallen/create">
                 <Flame className="h-3.5 w-3.5" />
-                <span className="hidden xl:inline">Добавить историю</span>
+                <span className="hidden 2xl:inline">Добавить историю</span>
               </Link>
             </Button>
           </div>

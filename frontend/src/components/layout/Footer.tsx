@@ -10,6 +10,8 @@ const navigation = {
   memorial: [
     { href: '/', label: 'Главная' },
     { href: '/fallen', label: 'Память героев' },
+    { href: '/stats', label: 'Статистика' },
+    { href: '/education', label: 'Образование' },
   ],
   info: [
     { href: '/about', label: 'О проекте' },
@@ -17,6 +19,7 @@ const navigation = {
   ],
   legal: [
     { href: '/privacy', label: 'Конфиденциальность' },
+    { href: '/consent', label: 'Согласие на обработку ПД' },
     { href: '/terms', label: 'Соглашение' },
   ],
 };

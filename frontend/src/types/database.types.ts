@@ -312,6 +312,114 @@ export type Database = {
           },
         ]
       }
+      condolences: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          fallen_id: string
+          id: string
+          is_deleted: boolean | null
+          moderated_at: string | null
+          moderated_by: string | null
+          rejection_reason: string | null
+          relationship_to_hero: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          fallen_id: string
+          id?: string
+          is_deleted?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rejection_reason?: string | null
+          relationship_to_hero?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          fallen_id?: string
+          id?: string
+          is_deleted?: boolean | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rejection_reason?: string | null
+          relationship_to_hero?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condolences_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["owner_id"]
+          },
+          {
+            foreignKeyName: "condolences_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condolences_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["owner_id"]
+          },
+          {
+            foreignKeyName: "condolences_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condolences_fallen_id_fkey"
+            columns: ["fallen_id"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condolences_fallen_id_fkey"
+            columns: ["fallen_id"]
+            isOneToOne: false
+            referencedRelation: "fallen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condolences_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["owner_id"]
+          },
+          {
+            foreignKeyName: "condolences_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editors: {
         Row: {
           deleted_at: string | null
@@ -1619,6 +1727,91 @@ export type Database = {
           {
             foreignKeyName: "users_deleted_by_fkey"
             columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      virtual_flowers: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          fallen_id: string
+          flower_color: string | null
+          flower_count: number | null
+          flower_type: string
+          id: string
+          is_deleted: boolean | null
+          message: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          fallen_id: string
+          flower_color?: string | null
+          flower_count?: number | null
+          flower_type: string
+          id?: string
+          is_deleted?: boolean | null
+          message?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          fallen_id?: string
+          flower_color?: string | null
+          flower_count?: number | null
+          flower_type?: string
+          id?: string
+          is_deleted?: boolean | null
+          message?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_flowers_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["owner_id"]
+          },
+          {
+            foreignKeyName: "virtual_flowers_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_flowers_fallen_id_fkey"
+            columns: ["fallen_id"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_flowers_fallen_id_fkey"
+            columns: ["fallen_id"]
+            isOneToOne: false
+            referencedRelation: "fallen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_flowers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_moderation_cards"
+            referencedColumns: ["owner_id"]
+          },
+          {
+            foreignKeyName: "virtual_flowers_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

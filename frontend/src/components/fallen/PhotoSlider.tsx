@@ -82,12 +82,12 @@ export function PhotoSlider({
     <>
       <div className={cn('relative w-full', className)}>
         {/* Main photo display */}
-        <div className="relative aspect-video overflow-hidden rounded-xl border border-border/50 bg-background shadow-md">
+        <div className="relative aspect-video max-h-[300px] sm:max-h-[400px] md:max-h-[450px] overflow-hidden rounded-xl border border-border/50 bg-background shadow-md">
           {currentPhoto?.file_url ? (
             <img
               src={currentPhoto.file_url}
               alt={currentPhoto.alt_text || ''}
-              className="h-full w-full cursor-pointer object-cover transition-transform hover:scale-105"
+              className="h-full w-full cursor-pointer object-contain transition-transform hover:scale-105"
               onClick={openFullscreen}
             />
           ) : (
@@ -203,12 +203,12 @@ export function PhotoSlider({
             </>
           )}
 
-          <div className="relative flex h-screen w-screen items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="relative flex h-screen w-screen items-center justify-center p-4 sm:p-8" onClick={(e) => e.stopPropagation()}>
             {currentPhoto?.file_url ? (
               <img
                 src={currentPhoto.file_url}
                 alt={currentPhoto.alt_text || ''}
-                className="max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] object-contain"
+                className="max-h-[70vh] max-w-[90vw] sm:max-h-[80vh] sm:max-w-[85vw] md:max-h-[85vh] md:max-w-[80vw] object-contain"
               />
             ) : (
               <div className="flex h-96 w-96 items-center justify-center">

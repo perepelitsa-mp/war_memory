@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Check, ImageIcon, Upload, X } from 'lucide-react'
+import { Check, ImageIcon, Upload, X, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
+import { compressImage } from '@/lib/imageCompression'
 
 interface FallenMedia {
   id: string
@@ -34,6 +35,7 @@ export function HeroPhotoSelector({
   const [photos, setPhotos] = useState<FallenMedia[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [selectedUrl, setSelectedUrl] = useState<string | null>(currentPhotoUrl)
   const [activeTab, setActiveTab] = useState<string>('gallery')
 
@@ -82,17 +84,25 @@ export function HeroPhotoSelector({
       return
     }
 
-    // Проверка размера (макс 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Размер файла не должен превышать 5 МБ')
+    // Сжимаем изображение перед загрузкой
+    setCompressing(true)
+    let compressedFile: File
+    try {
+      compressedFile = await compressImage(file, { imageType: 'hero' })
+    } catch (error) {
+      console.error('Error compressing image:', error)
+      alert('Не удалось подготовить изображение. Попробуйте другой файл.')
+      setCompressing(false)
       return
+    } finally {
+      setCompressing(false)
     }
 
     setUploading(true)
 
     try {
       const formData = new FormData()
-      formData.append('photos', file) // API ожидает 'photos' (множественное число)
+      formData.append('photos', compressedFile) // API ожидает 'photos' (множественное число)
       formData.append('fallen_id', fallenId) // API ожидает 'fallen_id' (snake_case)
       formData.append('caption', 'Фотография профиля')
 
@@ -210,30 +220,34 @@ export function HeroPhotoSelector({
 
           <TabsContent value="upload" className="space-y-4">
             <div className="flex flex-col items-center justify-center h-[400px] border-2 border-dashed rounded-lg p-8 space-y-4">
-              <Upload className="h-12 w-12 text-muted-foreground" />
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">
-                  Перетащите изображение сюда или нажмите кнопку
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Поддерживаются JPG, PNG, WebP (макс. 5 МБ)
-                </p>
-              </div>
-              <label htmlFor="photo-upload">
-                <Button type="button" disabled={uploading} asChild>
-                  <span className="cursor-pointer">
-                    {uploading ? 'Загрузка...' : 'Выбрать файл'}
-                  </span>
-                </Button>
-              </label>
-              <input
-                id="photo-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
+              {compressing || uploading ? (
+                <>
+                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                  <p className="text-sm font-medium">Загрузка изображения...</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-medium">
+                      Перетащите изображение сюда или нажмите кнопку
+                    </p>
+                  </div>
+                  <label htmlFor="photo-upload">
+                    <Button type="button" disabled={uploading || compressing} asChild>
+                      <span className="cursor-pointer">Выбрать файл</span>
+                    </Button>
+                  </label>
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={uploading || compressing}
+                  />
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>

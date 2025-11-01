@@ -32,12 +32,13 @@ const heroProfileSchema = z.object({
 type HeroProfileData = z.infer<typeof heroProfileSchema>;
 
 interface EditHeroProfileProps {
+  fallenId?: string; // Optional for create page
   initialData?: Partial<HeroProfileData>;
   onSave: (data: HeroProfileData) => Promise<void>;
   onCancel?: () => void;
 }
 
-export function EditHeroProfile({ initialData, onSave, onCancel }: EditHeroProfileProps) {
+export function EditHeroProfile({ fallenId, initialData, onSave, onCancel }: EditHeroProfileProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -99,6 +100,9 @@ export function EditHeroProfile({ initialData, onSave, onCancel }: EditHeroProfi
         setUploadProgress(true);
         const formData = new FormData();
         formData.append('file', photoFile);
+        if (fallenId) {
+          formData.append('fallen_id', fallenId);
+        }
 
         const uploadResponse = await fetch('/api/upload/photo', {
           method: 'POST',

@@ -53,6 +53,7 @@ export function HeroPhotoBlock({
       await alert({
         title: 'Фото обновлено',
         description: 'Фотография профиля успешно изменена.',
+        variant: 'success',
       })
 
       router.refresh()
@@ -61,6 +62,7 @@ export function HeroPhotoBlock({
       await alert({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Не удалось обновить фото.',
+        variant: 'error',
       })
     } finally {
       setIsUpdating(false)

@@ -8,7 +8,9 @@ import { Loader2, Phone, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 const registerSchema = z
   .object({
@@ -27,6 +29,9 @@ const registerSchema = z
       .regex(/[A-Za-z]/, 'Пароль должен содержать хотя бы одну букву')
       .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру'),
     confirmPassword: z.string().min(1, 'Подтвердите пароль'),
+    consent: z.boolean().refine((value) => value === true, {
+      message: 'Необходимо дать согласие на обработку персональных данных',
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Пароли не совпадают',
@@ -50,6 +55,8 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     handleSubmit,
     formState: { errors },
     getValues,
+    setValue,
+    watch,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -58,8 +65,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       phone: '',
       password: '',
       confirmPassword: '',
+      consent: false,
     },
   });
+
+  const consentValue = watch('consent');
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -243,6 +253,48 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           </div>
         )}
 
+        {/* Чекбокс согласия на обработку персональных данных */}
+        <div className="space-y-2">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="consent"
+              checked={consentValue}
+              onCheckedChange={(checked) => setValue('consent', checked === true)}
+              disabled={isLoading}
+              className="mt-0.5"
+            />
+            <label
+              htmlFor="consent"
+              className="text-xs leading-relaxed text-muted-foreground cursor-pointer"
+            >
+              Я подтверждаю ознакомление и даю{' '}
+              <Link
+                href="/consent"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Согласие
+              </Link>{' '}
+              на обработку моих персональных данных в порядке и на условиях, указанных в{' '}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Политике конфиденциальности
+              </Link>
+              *
+            </label>
+          </div>
+          {errors.consent && (
+            <p className="text-sm text-destructive">{errors.consent.message}</p>
+          )}
+        </div>
+
         <Button
           type="submit"
           className="w-full bg-gradient-to-r from-ribbon-orange to-primary shadow-glow hover:shadow-glow/80"
@@ -257,10 +309,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
             'Зарегистрироваться'
           )}
         </Button>
-
-        <p className="text-xs text-center text-muted-foreground">
-          Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
-        </p>
       </form>
     </div>
   );

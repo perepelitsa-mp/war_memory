@@ -74,6 +74,7 @@ export function EditableField({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Не удалось обновить поле',
         confirmText: 'Закрыть',
+        variant: 'error',
       })
     } finally {
       setIsLoading(false)

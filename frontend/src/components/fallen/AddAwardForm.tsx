@@ -72,6 +72,7 @@ export function AddAwardForm({
         title: 'Выберите награду',
         description: 'Необходимо выбрать награду из списка',
         confirmText: 'Понятно',
+        variant: 'warning',
       })
       return
     }
@@ -81,6 +82,7 @@ export function AddAwardForm({
         title: 'Укажите основание',
         description: 'Укажите за что награждён',
         confirmText: 'Понятно',
+        variant: 'warning',
       })
       return
     }
@@ -88,17 +90,35 @@ export function AddAwardForm({
     setIsSubmitting(true)
 
     try {
-      // TODO: Отправка на сервер
-      console.log('Добавление награды:', {
-        fallen_id: fallenId,
-        award_id: selectedAward.id,
-        citation: citation.trim(),
-        awarded_date: awardedDate || null,
-        decree_number: decreeNumber.trim() || null,
+      const response = await fetch(`/api/fallen/${fallenId}/awards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          award_id: selectedAward.id,
+          citation: citation.trim(),
+          awarded_date: awardedDate || null,
+          decree_number: decreeNumber.trim() || null,
+        }),
       })
 
-      // Имитация запроса
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Обработка специфических ошибок
+        if (response.status === 409) {
+          await alert({
+            title: 'Награда уже добавлена',
+            description: 'Эта награда уже есть в списке наград героя.',
+            confirmText: 'Понятно',
+            variant: 'warning',
+          })
+          return
+        }
+
+        throw new Error(data.error || 'Failed to add award')
+      }
 
       // Сброс формы
       setSelectedAward(null)
@@ -113,13 +133,15 @@ export function AddAwardForm({
         title: 'Успешно',
         description: 'Награда успешно добавлена!',
         confirmText: 'Отлично',
+        variant: 'success',
       })
     } catch (error) {
       console.error('Ошибка при добавлении награды:', error)
       await alert({
         title: 'Ошибка',
-        description: 'Не удалось добавить награду. Попробуйте ещё раз.',
+        description: error instanceof Error ? error.message : 'Не удалось добавить награду. Попробуйте ещё раз.',
         confirmText: 'Закрыть',
+        variant: 'error',
       })
     } finally {
       setIsSubmitting(false)

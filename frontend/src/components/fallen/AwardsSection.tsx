@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ interface AwardsSectionProps {
   awards: FallenAwardWithDetails[]
   fallenId: string
   availableAwards: Award[]
+  canEdit?: boolean
   className?: string
 }
 
@@ -50,8 +52,10 @@ export function AwardsSection({
   awards,
   fallenId,
   availableAwards,
+  canEdit = false,
   className,
 }: AwardsSectionProps) {
+  const router = useRouter()
   const [showAddForm, setShowAddForm] = useState(false)
 
   // Сортируем награды по sort_order (от большего к меньшему)
@@ -60,8 +64,8 @@ export function AwardsSection({
     : []
 
   const handleAddSuccess = () => {
-    // TODO: Обновить список наград после добавления
-    console.log('Награда добавлена, обновление списка...')
+    // Обновляем страницу для получения свежих данных
+    router.refresh()
   }
 
   return (
@@ -89,11 +93,13 @@ export function AwardsSection({
               </div>
             </div>
 
-            {/* Кнопка добавления награды */}
-            <Button onClick={() => setShowAddForm(true)} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Добавить награду
-            </Button>
+            {/* Кнопка добавления награды - только для владельцев, редакторов и модераторов */}
+            {canEdit && (
+              <Button onClick={() => setShowAddForm(true)} size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Добавить награду
+              </Button>
+            )}
           </div>
         </CardHeader>
 

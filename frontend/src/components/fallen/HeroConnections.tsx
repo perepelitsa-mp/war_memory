@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users, Heart, Shield, UserPlus } from 'lucide-react'
+import { Users, Heart, Shield, UserPlus, UserCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { AddConnectionDialog } from './AddConnectionDialog'
+import { AddConnectionAdminDialog } from './AddConnectionAdminDialog'
 
 interface ConnectionUser {
   id: string
@@ -28,6 +29,7 @@ interface HeroConnectionsProps {
   relatives: Connection[]
   friends: Connection[]
   fellowSoldiers: Connection[]
+  canEdit?: boolean
 }
 
 const relationshipLabels: Record<string, string> = {
@@ -86,8 +88,10 @@ export function HeroConnections({
   relatives,
   friends,
   fellowSoldiers,
+  canEdit = false,
 }: HeroConnectionsProps) {
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showAdminDialog, setShowAdminDialog] = useState(false)
   const hasConnections = relatives.length > 0 || friends.length > 0 || fellowSoldiers.length > 0
 
   return (
@@ -174,21 +178,40 @@ export function HeroConnections({
           </Card>
         )}
 
-        {/* Кнопка добавления связи */}
-        <Button
-          onClick={() => setShowAddDialog(true)}
-          variant="outline"
-          className="w-full gap-2"
-        >
-          <UserPlus className="h-4 w-4" />
-          Добавить связь
-        </Button>
+        {/* Кнопки добавления связи */}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            onClick={() => setShowAddDialog(true)}
+            variant="outline"
+            className="flex-1 gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Добавить связь
+          </Button>
+
+          {canEdit && (
+            <Button
+              onClick={() => setShowAdminDialog(true)}
+              variant="outline"
+              className="flex-1 gap-2 border-amber-600/30 hover:border-amber-600/50 hover:bg-amber-600/10"
+            >
+              <UserCog className="h-4 w-4" />
+              Добавить из списка пользователей
+            </Button>
+          )}
+        </div>
       </div>
 
       <AddConnectionDialog
         fallenId={fallenId}
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+      />
+
+      <AddConnectionAdminDialog
+        fallenId={fallenId}
+        open={showAdminDialog}
+        onOpenChange={setShowAdminDialog}
       />
     </>
   )

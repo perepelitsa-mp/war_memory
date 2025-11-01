@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, User } from 'lucide-react'
+import { Upload, User, Loader2 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { compressImage } from '@/lib/imageCompression'
 
 interface AvatarUploadProps {
   currentAvatarUrl: string | null
@@ -14,6 +15,7 @@ interface AvatarUploadProps {
 export function AvatarUpload({ currentAvatarUrl, userName }: AvatarUploadProps) {
   const router = useRouter()
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -24,15 +26,24 @@ export function AvatarUpload({ currentAvatarUrl, userName }: AvatarUploadProps) 
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Размер файла не должен превышать 5 МБ')
+    // Сжимаем изображение перед загрузкой
+    setCompressing(true)
+    let compressedFile: File
+    try {
+      compressedFile = await compressImage(file, { imageType: 'avatar' })
+    } catch (error) {
+      console.error('Error compressing avatar:', error)
+      alert('Не удалось подготовить изображение. Попробуйте другой файл.')
+      setCompressing(false)
       return
+    } finally {
+      setCompressing(false)
     }
 
     setUploading(true)
     try {
       const formData = new FormData()
-      formData.append('avatar', file)
+      formData.append('avatar', compressedFile)
 
       const response = await fetch('/api/profile/avatar', {
         method: 'POST',
@@ -71,10 +82,14 @@ export function AvatarUpload({ currentAvatarUrl, userName }: AvatarUploadProps) 
       </Avatar>
       <div className="space-y-2">
         <label htmlFor="avatar-upload">
-          <Button disabled={uploading} asChild>
+          <Button disabled={uploading || compressing} asChild>
             <span className="cursor-pointer gap-2">
-              <Upload className="h-4 w-4" />
-              {uploading ? 'Загрузка...' : 'Загрузить фото'}
+              {compressing || uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {compressing || uploading ? 'Загрузка...' : 'Загрузить фото'}
             </span>
           </Button>
         </label>
@@ -84,10 +99,10 @@ export function AvatarUpload({ currentAvatarUrl, userName }: AvatarUploadProps) 
           accept="image/*"
           className="hidden"
           onChange={handleFileChange}
-          disabled={uploading}
+          disabled={uploading || compressing}
         />
         <p className="text-xs text-muted-foreground">
-          JPG, PNG или WebP. Макс. 5 МБ.
+          JPG, PNG или WebP
         </p>
       </div>
     </div>

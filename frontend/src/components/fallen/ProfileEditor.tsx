@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
-import { Pencil, Save, X, User, Calendar } from 'lucide-react'
+import { Pencil, Save, X, User, Calendar, Shield } from 'lucide-react'
 import { RankIcon, UnitIcon, ServiceIcon, HometownIcon, BurialIcon } from '@/components/icons'
 import { useRouter } from 'next/navigation'
 import { SettlementCombobox } from '@/components/ui/settlement-combobox'
+import { VusSelector } from './VusSelector'
 
 interface ProfileData {
   first_name: string | null
@@ -23,6 +24,7 @@ interface ProfileData {
   service_end_date: string | null
   rank: string | null
   military_unit: string | null
+  vus_id: string | null
   hometown: string | null
   burial_location: string | null
 }
@@ -59,6 +61,42 @@ const formatDateRange = (startDate: string | null, endDate: string | null) => {
   if (start) return `с ${start}`
   if (end) return `по ${end}`
   return null
+}
+
+// Компонент для отображения ВУС в режиме просмотра
+function VusDisplay({ vusId }: { vusId: string | null }) {
+  const [vus, setVus] = useState<{ code: string; name: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!vusId) {
+      setIsLoading(false)
+      return
+    }
+
+    fetch('/api/vus')
+      .then((res) => res.json())
+      .then((data) => {
+        const foundVus = data.vus?.find((v: any) => v.id === vusId)
+        setVus(foundVus || null)
+      })
+      .catch((err) => console.error('Error loading VUS:', err))
+      .finally(() => setIsLoading(false))
+  }, [vusId])
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground sm:text-base">Загрузка...</p>
+  }
+
+  if (!vus) {
+    return <p className="text-sm text-foreground sm:text-base">—</p>
+  }
+
+  return (
+    <p className="text-sm text-foreground sm:text-base">
+      {vus.code} - {vus.name}
+    </p>
+  )
 }
 
 export function ProfileEditor({ fallenId, initialData, canEdit }: ProfileEditorProps) {
@@ -106,6 +144,7 @@ export function ProfileEditor({ fallenId, initialData, canEdit }: ProfileEditorP
         await alert({
           title: 'Нет изменений',
           description: 'Вы не внесли никаких изменений в профиль.',
+          variant: 'info',
         })
         setIsEditing(false)
         setIsLoading(false)
@@ -132,6 +171,7 @@ export function ProfileEditor({ fallenId, initialData, canEdit }: ProfileEditorP
       await alert({
         title: 'Профиль обновлён',
         description: 'Все изменения успешно сохранены.',
+        variant: 'success',
       })
 
       setIsEditing(false)
@@ -140,6 +180,7 @@ export function ProfileEditor({ fallenId, initialData, canEdit }: ProfileEditorP
       await alert({
         title: 'Ошибка сохранения',
         description: error instanceof Error ? error.message : 'Не удалось сохранить изменения.',
+        variant: 'error',
       })
     } finally {
       setIsLoading(false)
@@ -280,6 +321,23 @@ export function ProfileEditor({ fallenId, initialData, canEdit }: ProfileEditorP
               />
             ) : (
               <p className="text-sm text-foreground sm:text-base">{formData.military_unit || '—'}</p>
+            )}
+          </div>
+
+          {/* ВУС (Военно-учётная специальность) */}
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label htmlFor="vus_id" className="flex items-center gap-1.5 text-xs sm:gap-2 sm:text-sm">
+              <Shield className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" />
+              ВУС
+            </Label>
+            {isEditing ? (
+              <VusSelector
+                value={formData.vus_id}
+                onChange={(value) => setFormData({ ...formData, vus_id: value })}
+                disabled={isLoading}
+              />
+            ) : (
+              <VusDisplay vusId={formData.vus_id} />
             )}
           </div>
 

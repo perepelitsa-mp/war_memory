@@ -47,6 +47,10 @@ export const metadata: Metadata = {
     description:
       'Интерактивный мемориал в честь павших защитников: архивы, хроники, карта памяти и живые истории потомков.',
   },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 };
 
 const themeInitScript = `

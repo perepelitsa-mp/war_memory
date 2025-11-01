@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { FallenCard } from '@/components/fallen/FallenCard'
 import { HeroesFilter } from '@/components/home/HeroesFilter'
 import { FallenCardSkeleton } from '@/components/fallen/FallenCardSkeleton'
+import { MemorialCalendar } from '@/components/home/MemorialCalendar'
 import { Fallen } from '@/types'
 
 // Dynamic import to prevent hydration errors (uses Math.random on client)
@@ -144,12 +145,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       {/* Hero Section */}
       <section className="mb-8 text-center sm:mb-12">
         <div className="mx-auto max-w-3xl px-4">
+          {/* Logo */}
+          <div className="mb-4 flex justify-center sm:mb-6">
+            <img
+              src="/images/logotype.webp"
+              alt="Память героев"
+              className="h-32 w-auto object-contain sm:h-40 md:h-48"
+            />
+          </div>
           <h1 className="mb-3 text-3xl font-bold tracking-tight sm:mb-4 sm:text-4xl md:text-5xl">
             Память героев
           </h1>
           <p className="text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
             Цифровой мемориал собирает истории павших защитников, чтобы память
-            жила в каждом доме и оставалась частью нашей общей истории. Страна обязана знать своих Героев.
+            жила в каждом доме и оставалась частью нашей общей истории. Страна обязана знать и помнить своих Героев.
           </p>
 
           {/* Акцентный маркер раздела */}
@@ -173,6 +182,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div className="mt-1 text-xs text-muted-foreground sm:text-sm">зарегистрированных пользователей</div>
           </div>
         </div>
+      </section>
+
+      {/* Memorial Calendar - Помним сегодня */}
+      <section className="mb-8 sm:mb-12">
+        <MemorialCalendar />
       </section>
 
       {/* Filter */}
@@ -229,7 +243,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <section className="mt-12 sm:mt-16">
           <div className="mb-6 text-center sm:mb-8">
             <h2 className="mb-2 text-2xl font-bold tracking-tight sm:mb-3 sm:text-3xl md:text-4xl">
-              Лик Героя
+              Лица Героев
             </h2>
             <p className="mx-auto max-w-2xl px-4 text-xs leading-relaxed text-muted-foreground sm:text-sm md:text-base">
               Интерактивная стена памяти. Каждое фото — это история жизни и подвига.

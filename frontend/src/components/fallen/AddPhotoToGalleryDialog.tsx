@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImagePlus, Loader2 } from 'lucide-react'
 import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
+import { compressImages } from '@/lib/imageCompression'
 
 interface AddPhotoToGalleryDialogProps {
   open: boolean
@@ -24,22 +25,56 @@ export function AddPhotoToGalleryDialog({
 }: AddPhotoToGalleryDialogProps) {
   const { alert } = useConfirmDialog()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null)
+  const [compressedFiles, setCompressedFiles] = useState<File[]>([])
   const [caption, setCaption] = useState('')
   const [altText, setAltText] = useState('')
+  const [compressionProgress, setCompressionProgress] = useState({ current: 0, total: 0 })
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSelectedFiles(e.target.files)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    setSelectedFiles(files)
+
+    if (!files || files.length === 0) {
+      setCompressedFiles([])
+      return
+    }
+
+    // Автоматически сжимаем изображения при выборе
+    setIsCompressing(true)
+    setCompressionProgress({ current: 0, total: files.length })
+
+    try {
+      const filesArray = Array.from(files)
+      const compressed = await compressImages(
+        filesArray,
+        { imageType: 'gallery' },
+        (current, total) => {
+          setCompressionProgress({ current, total })
+        }
+      )
+
+      setCompressedFiles(compressed)
+    } catch (error) {
+      console.error('Error compressing images:', error)
+      // Используем исходные файлы если сжатие не удалось
+      setCompressedFiles(Array.from(files))
+    } finally {
+      setIsCompressing(false)
+      setCompressionProgress({ current: 0, total: 0 })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedFiles || selectedFiles.length === 0) {
+    if (compressedFiles.length === 0) {
       await alert({
         title: 'Выберите фотографии',
         description: 'Выберите хотя бы одну фотографию',
         confirmText: 'Понятно',
+        variant: 'warning',
       })
       return
     }
@@ -52,8 +87,8 @@ export function AddPhotoToGalleryDialog({
       formData.append('caption', caption)
       formData.append('alt_text', altText)
 
-      // Добавляем все выбранные файлы
-      Array.from(selectedFiles).forEach((file) => {
+      // Добавляем сжатые файлы
+      compressedFiles.forEach((file) => {
         formData.append('photos', file)
       })
 
@@ -69,8 +104,18 @@ export function AddPhotoToGalleryDialog({
 
       // Очистка формы
       setSelectedFiles(null)
+      setCompressedFiles([])
       setCaption('')
       setAltText('')
+
+      // Показываем уведомление об успехе
+      await alert({
+        title: 'Изображения загружены',
+        description: `Успешно загружено ${compressedFiles.length} ${compressedFiles.length === 1 ? 'изображение' : compressedFiles.length < 5 ? 'изображения' : 'изображений'}`,
+        confirmText: 'Отлично',
+        variant: 'success',
+      })
+
       onOpenChange(false)
 
       if (onSuccess) {
@@ -82,6 +127,7 @@ export function AddPhotoToGalleryDialog({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Не удалось загрузить фотографии',
         confirmText: 'Закрыть',
+        variant: 'error',
       })
     } finally {
       setIsSubmitting(false)
@@ -108,11 +154,21 @@ export function AddPhotoToGalleryDialog({
               multiple
               onChange={handleFileChange}
               required
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCompressing}
             />
-            <p className="text-xs text-muted-foreground">
-              Вы можете выбрать несколько фотографий
-            </p>
+            {isCompressing && compressionProgress.total > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>
+                  Подготовка изображений: {compressionProgress.current} / {compressionProgress.total}
+                </span>
+              </div>
+            )}
+            {!isCompressing && compressedFiles.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Вы можете выбрать несколько фотографий
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -143,13 +199,13 @@ export function AddPhotoToGalleryDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCompressing}
               className="flex-1"
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1 gap-2">
-              {isSubmitting ? (
+            <Button type="submit" disabled={isSubmitting || isCompressing} className="flex-1 gap-2">
+              {isSubmitting || isCompressing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Загрузка...

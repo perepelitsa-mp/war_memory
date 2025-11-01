@@ -15,6 +15,7 @@ import {
 import { Loader2, AlertCircle, ImagePlus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
+import { compressImages } from '@/lib/imageCompression'
 
 interface AddMemoryAdditionFormProps {
   open: boolean
@@ -39,12 +40,13 @@ export function AddMemoryAdditionForm({
   const [photos, setPhotos] = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length
   const isOverLimit = wordCount > MAX_WORDS
 
-  const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const remainingSlots = MAX_PHOTOS - photos.length
 
@@ -53,11 +55,26 @@ export function AddMemoryAdditionForm({
       return
     }
 
-    const newPhotos = files.slice(0, remainingSlots)
-    setPhotos((prev) => [...prev, ...newPhotos])
+    const filesToCompress = files.slice(0, remainingSlots)
 
-    // Создаем превью
-    newPhotos.forEach((file) => {
+    // Сжимаем изображения перед созданием превью
+    setCompressing(true)
+    let compressedPhotos: File[]
+    try {
+      compressedPhotos = await compressImages(filesToCompress, { imageType: 'gallery' })
+    } catch (error) {
+      console.error('Error compressing addition photos:', error)
+      setError('Не удалось подготовить некоторые изображения. Попробуйте другие файлы.')
+      setCompressing(false)
+      return
+    } finally {
+      setCompressing(false)
+    }
+
+    setPhotos((prev) => [...prev, ...compressedPhotos])
+
+    // Создаем превью из сжатых файлов
+    compressedPhotos.forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
         setPhotoPreviews((prev) => [...prev, reader.result as string])
@@ -246,19 +263,30 @@ export function AddMemoryAdditionForm({
                   multiple
                   onChange={handlePhotoChange}
                   className="hidden"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || compressing}
                 />
                 <Label
                   htmlFor="photos"
                   className={cn(
                     'flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-background-soft/50 px-6 py-8 text-sm transition-colors hover:border-primary hover:bg-background-soft',
-                    isSubmitting && 'cursor-not-allowed opacity-50',
+                    (isSubmitting || compressing) && 'cursor-not-allowed opacity-50',
                   )}
                 >
-                  <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    Добавить фотографии ({photos.length}/{MAX_PHOTOS})
-                  </span>
+                  {compressing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                      <span className="text-muted-foreground">
+                        Загрузка изображений...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        Добавить фотографии ({photos.length}/{MAX_PHOTOS})
+                      </span>
+                    </>
+                  )}
                 </Label>
               </div>
             )}
@@ -275,7 +303,7 @@ export function AddMemoryAdditionForm({
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button type="submit" disabled={isSubmitting || isOverLimit}>
+            <Button type="submit" disabled={isSubmitting || isOverLimit || compressing}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

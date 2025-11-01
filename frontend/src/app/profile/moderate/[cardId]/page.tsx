@@ -85,6 +85,7 @@ export default function ModerationPage({ params }: { params: { cardId: string } 
         title: 'Ошибка',
         description: err instanceof Error ? err.message : 'Ошибка модерации',
         confirmText: 'Закрыть',
+        variant: 'error',
       });
     }
   };

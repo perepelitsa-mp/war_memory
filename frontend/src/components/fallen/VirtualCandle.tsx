@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Flame, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 interface VirtualCandleProps {
   fallenId: string
@@ -20,6 +21,7 @@ export function VirtualCandle({
   compact = false,
 }: VirtualCandleProps) {
   const router = useRouter()
+  const { openAuthModal } = useAuthModal()
   const [count, setCount] = useState(initialCount)
   const [isLit, setIsLit] = useState(initialLit)
   const [isLoading, setIsLoading] = useState(false)
@@ -51,8 +53,8 @@ export function VirtualCandle({
       })
 
       if (response.status === 401) {
-        // Пользователь не авторизован - редирект на авторизацию
-        router.push('/auth/signin')
+        // Пользователь не авторизован - открываем модальное окно авторизации
+        openAuthModal()
         return
       }
 

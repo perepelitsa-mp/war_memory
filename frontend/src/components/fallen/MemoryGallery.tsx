@@ -116,6 +116,7 @@ export function MemoryGallery({ photos, fallenId }: MemoryGalleryProps) {
         title: 'Превышен лимит',
         description: `Можно закрепить не более ${MAX_PINNED} фотографий`,
         confirmText: 'Понятно',
+        variant: 'warning',
       })
       return
     }
@@ -552,9 +553,17 @@ export function MemoryGallery({ photos, fallenId }: MemoryGalleryProps) {
       />
 
       {fullscreenState && fullscreenState.collection.length > 0 && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/98 backdrop-blur-md animate-in fade-in duration-300">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/98 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={(e) => {
+            // Закрываем модалку при клике на фон (но не на содержимое)
+            if (e.target === e.currentTarget) {
+              closeFullscreen()
+            }
+          }}
+        >
           {/* Header with close button and counter */}
-          <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-5">
+          <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-6 py-5">
             <div className="flex items-center gap-3">
               <div className="flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#FF8C42]/20 to-[#FF6B35]/20 px-4 backdrop-blur-sm">
                 <ImageIcon className="h-4 w-4 text-[#FF8C42]" />
@@ -564,6 +573,7 @@ export function MemoryGallery({ photos, fallenId }: MemoryGalleryProps) {
               </div>
             </div>
             <button
+              type="button"
               className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-110 active:scale-95"
               onClick={closeFullscreen}
               aria-label="Закрыть"
@@ -576,14 +586,16 @@ export function MemoryGallery({ photos, fallenId }: MemoryGalleryProps) {
           {fullscreenState.collection.length > 1 && (
             <>
               <button
-                className="absolute left-6 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-white/15 to-white/5 text-white shadow-2xl backdrop-blur-md transition-all hover:from-white/25 hover:to-white/15 hover:scale-110 active:scale-95"
+                type="button"
+                className="absolute left-6 top-1/2 z-10 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-white/15 to-white/5 text-white shadow-2xl backdrop-blur-md transition-all hover:from-white/25 hover:to-white/15 hover:scale-110 active:scale-95"
                 onClick={() => stepFullscreen(-1)}
                 aria-label="Предыдущее фото"
               >
                 <ChevronLeft className="h-7 w-7" />
               </button>
               <button
-                className="absolute right-6 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-white/15 to-white/5 text-white shadow-2xl backdrop-blur-md transition-all hover:from-white/25 hover:to-white/15 hover:scale-110 active:scale-95"
+                type="button"
+                className="absolute right-6 top-1/2 z-10 flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br from-white/15 to-white/5 text-white shadow-2xl backdrop-blur-md transition-all hover:from-white/25 hover:to-white/15 hover:scale-110 active:scale-95"
                 onClick={() => stepFullscreen(1)}
                 aria-label="Следующее фото"
               >
@@ -630,7 +642,7 @@ export function MemoryGallery({ photos, fallenId }: MemoryGalleryProps) {
 
           {/* Keyboard hint */}
           {fullscreenState.collection.length > 1 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+            <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2">
               <div className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 backdrop-blur-sm">
                 <span className="text-xs text-white/50">
                   Используйте клавиши ← → для навигации

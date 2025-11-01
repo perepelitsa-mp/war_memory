@@ -18,9 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Получаем файл из FormData
+    // Получаем файл и fallenId из FormData
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const fallenId = formData.get('fallen_id') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'Файл не предоставлен' }, { status: 400 });
@@ -44,7 +45,10 @@ export async function POST(request: NextRequest) {
 
     // Генерируем уникальное имя файла
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+    // Для новых карточек (без fallenId) используем временную папку пользователя
+    const fileName = fallenId
+      ? `${fallenId}/hero-${Date.now()}.${fileExt}`
+      : `temp/${user.id}/hero-${Date.now()}.${fileExt}`;
 
     // Загружаем файл в Storage
     const { data, error: uploadError } = await supabase.storage

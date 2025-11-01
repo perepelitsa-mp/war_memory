@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useAuthModal } from '@/contexts/AuthModalContext'
 
 interface AddConnectionDialogProps {
   fallenId: string
@@ -30,6 +31,7 @@ const relationshipOptions = [
 
 export function AddConnectionDialog({ fallenId, open, onOpenChange }: AddConnectionDialogProps) {
   const router = useRouter()
+  const { openAuthModal } = useAuthModal()
   const [loading, setLoading] = useState(false)
   const [connectionType, setConnectionType] = useState<string>('')
   const [relationship, setRelationship] = useState<string>('')
@@ -63,7 +65,7 @@ export function AddConnectionDialog({ fallenId, open, onOpenChange }: AddConnect
 
       if (response.status === 401) {
         alert('Необходимо авторизоваться')
-        router.push('/auth/signin')
+        openAuthModal()
         return
       }
 

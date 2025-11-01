@@ -17,6 +17,7 @@ import { ImagePlus, X, Loader2, AlertCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { MemoryItemWithDetails } from '@/types'
 import { useConfirmDialog } from '@/components/ui/alert-dialog-custom'
+import { compressImages } from '@/lib/imageCompression'
 
 interface EditMemoryFormProps {
   open: boolean
@@ -38,6 +39,7 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
   const [newPhotos, setNewPhotos] = useState<File[]>([])
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Reset form when memory changes
@@ -59,7 +61,7 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
   )
   const totalPhotos = activeExistingPhotos.length + newPhotos.length
 
-  const handleNewPhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewPhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const remainingSlots = MAX_PHOTOS - totalPhotos
 
@@ -68,11 +70,26 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
       return
     }
 
-    const photosToAdd = files.slice(0, remainingSlots)
-    setNewPhotos((prev) => [...prev, ...photosToAdd])
+    const filesToCompress = files.slice(0, remainingSlots)
 
-    // Создаем превью
-    photosToAdd.forEach((file) => {
+    // Сжимаем изображения перед созданием превью
+    setCompressing(true)
+    let compressedPhotos: File[]
+    try {
+      compressedPhotos = await compressImages(filesToCompress, { imageType: 'gallery' })
+    } catch (error) {
+      console.error('Error compressing edit memory photos:', error)
+      setError('Не удалось подготовить некоторые изображения. Попробуйте другие файлы.')
+      setCompressing(false)
+      return
+    } finally {
+      setCompressing(false)
+    }
+
+    setNewPhotos((prev) => [...prev, ...compressedPhotos])
+
+    // Создаем превью из сжатых файлов
+    compressedPhotos.forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
         setNewPhotoPreviews((prev) => [...prev, reader.result as string])
@@ -364,13 +381,24 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
                 htmlFor="new-photos"
                 className={cn(
                   'flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/60 bg-background/50 px-4 py-8 transition-colors hover:border-primary/50 hover:bg-background/80',
-                  isSubmitting && 'pointer-events-none opacity-50'
+                  (isSubmitting || compressing) && 'pointer-events-none opacity-50'
                 )}
               >
-                <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Выберите фотографии (до {MAX_PHOTOS - totalPhotos} шт.)
-                </span>
+                {compressing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                    <span className="text-sm text-muted-foreground">
+                      Загрузка изображений...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Выберите фотографии (до {MAX_PHOTOS - totalPhotos} шт.)
+                    </span>
+                  </>
+                )}
                 <input
                   id="new-photos"
                   type="file"
@@ -378,7 +406,7 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
                   multiple
                   onChange={handleNewPhotoChange}
                   className="hidden"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || compressing}
                 />
               </label>
             </div>
@@ -388,7 +416,7 @@ export function EditMemoryForm({ open, onOpenChange, memory, fallenId, onSuccess
             <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
               Отмена
             </Button>
-            <Button type="submit" disabled={isSubmitting || isOverLimit}>
+            <Button type="submit" disabled={isSubmitting || isOverLimit || compressing}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -219,7 +219,7 @@ function TimelineItemCard({
                 alt={item.media?.alt_text || `Фотография события «${item.title}»`}
                 width={720}
                 height={480}
-                className="h-full w-full max-h-48 object-cover transition-transform group-hover:scale-[1.02] sm:max-h-56 md:max-h-60"
+                className="h-full w-full max-h-[180px] object-contain transition-transform group-hover:scale-[1.02] sm:max-h-56 md:max-h-60"
                 unoptimized
               />
             </div>
@@ -233,14 +233,14 @@ function TimelineItemCard({
 export function Timeline({ items, canManage, onEdit, onDelete, deletingId }: TimelineProps) {
   if (!items || items.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-background-soft/80 px-6 py-8 text-center text-sm text-foreground/70">
+      <div className="rounded-2xl border border-border/40 bg-background-soft/80 px-4 py-6 text-center text-xs text-foreground/70 sm:px-6 sm:py-8 sm:text-sm">
         Пока нет событий. Поделитесь важными вехами жизни героя, чтобы история зазвучала полнее.
       </div>
     );
   }
 
   return (
-    <div className="relative space-y-4 sm:space-y-6">
+    <div className="relative space-y-3 sm:space-y-4 md:space-y-6">
       <div className="pointer-events-none absolute left-[15px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary/40 via-border/60 to-primary/20 sm:left-[19px]" />
 
       {items.map((item, index) => (

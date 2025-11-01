@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { LogIn, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { AuthModal } from './AuthModal';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthModal } from '@/contexts/AuthModalContext';
 
 interface AuthButtonProps {
   variant?: 'default' | 'ghost' | 'outline';
@@ -23,7 +23,8 @@ export function AuthButton({
   children,
 }: AuthButtonProps) {
   const { isAuthenticated, loading, signOut } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const { openAuthModal } = useAuthModal();
+  const [showRipple, setShowRipple] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
 
@@ -35,7 +36,9 @@ export function AuthButton({
         y: rect.top + rect.height / 2,
       });
     }
-    setIsOpen(true);
+    setShowRipple(true);
+    setTimeout(() => setShowRipple(false), 600);
+    openAuthModal();
   };
 
   // Если идет загрузка, показываем пустую кнопку
@@ -110,7 +113,7 @@ export function AuthButton({
 
       {/* Анимация "ripple" от кнопки */}
       <AnimatePresence>
-        {isOpen && (
+        {showRipple && (
           <motion.div
             initial={{
               position: 'fixed',
@@ -137,8 +140,6 @@ export function AuthButton({
           />
         )}
       </AnimatePresence>
-
-      <AuthModal open={isOpen} onOpenChange={setIsOpen} />
     </>
   );
 }

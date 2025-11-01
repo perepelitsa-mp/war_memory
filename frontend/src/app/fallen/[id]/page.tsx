@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Award as AwardIcon, CalendarDays, Flame, MapPin, MessageCircle, Shield } from 'lucide-react'
+import { CalendarDays, Flame, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getFullName } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TimelineWithForm } from '@/components/fallen/TimelineWithForm'
 import { MemoryGallery } from '@/components/fallen/MemoryGallery'
@@ -14,11 +13,14 @@ import { Comments } from '@/components/fallen/Comments'
 import { MemorialTextSection } from '@/components/fallen/MemorialTextSection'
 import { BiographySection } from '@/components/fallen/BiographySection'
 import { ModeratorsSection } from '@/components/fallen/ModeratorsSection'
-import { ProfileEditor } from '@/components/fallen/ProfileEditor'
-import { HeroPhotoBlock } from '@/components/fallen/HeroPhotoBlock'
+import { ProfileEditorNew as ProfileEditor } from '@/components/fallen/ProfileEditorNew'
+import { HeroProfileCard } from '@/components/fallen/HeroProfileCard'
 import { CandleLightsList } from '@/components/fallen/CandleLightsList'
 import { HeroConnections } from '@/components/fallen/HeroConnections'
 import { ConnectionModeration } from '@/components/fallen/ConnectionModeration'
+import { FlowersList } from '@/components/fallen/FlowersList'
+import { CondolenceBook } from '@/components/fallen/CondolenceBook'
+import { CondolenceModeration } from '@/components/fallen/CondolenceModeration'
 import type {
   Award,
   CommentWithAuthor,
@@ -313,6 +315,57 @@ export default async function FallenDetailPage({ params }: PageProps) {
   const friends = allConnections.filter((c: any) => c.connection_type === 'friend')
   const fellowSoldiers = allConnections.filter((c: any) => c.connection_type === 'fellow_soldier')
 
+  // Загрузка виртуальных цветов
+  const { data: flowersData } = await supabase
+    .from('virtual_flowers')
+    .select(
+      `
+      id,
+      flower_type,
+      flower_color,
+      flower_count,
+      message,
+      created_at,
+      user:users!virtual_flowers_user_id_fkey(id, full_name, avatar_url)
+    `
+    )
+    .eq('fallen_id', id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  const flowers = flowersData || []
+  const totalFlowers = flowers.reduce((sum, flower) => sum + (flower.flower_count || 1), 0)
+
+  // Загрузка соболезнований
+  const { data: condolencesData } = await supabase
+    .from('condolences')
+    .select(
+      `
+      id,
+      content,
+      relationship_to_hero,
+      status,
+      created_at,
+      author:users!condolences_author_id_fkey(id, full_name, avatar_url)
+    `
+    )
+    .eq('fallen_id', id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+
+  // Разделяем на одобренные и pending
+  const allCondolences = condolencesData || []
+  const approvedCondolences = allCondolences.filter((c: any) => c.status === 'approved')
+  const pendingCondolencesForOwner = allCondolences.filter((c: any) => c.status === 'pending')
+
+  // Если текущий пользователь - автор, добавляем его pending соболезнования
+  const userPendingCondolences = currentUser
+    ? pendingCondolencesForOwner.filter((c: any) => c.author?.id === currentUser.id)
+    : []
+
+  // Для отображения: показываем одобренные + свои pending
+  const visibleCondolences = [...approvedCondolences, ...userPendingCondolences]
+
   const buildCommentsTree = (flatComments: CommentWithAuthor[] = []): CommentRecord[] => {
     const map = new Map<string, CommentRecord>()
     const roots: CommentRecord[] = []
@@ -426,154 +479,97 @@ export default async function FallenDetailPage({ params }: PageProps) {
     {
       label: 'Вид службы',
       value: getServiceTypeLabel(fallData.service_type),
-      icon: Shield,
+      iconName: 'Shield' as const,
     },
     {
       label: 'Звание',
       value: fallData.rank,
-      icon: Shield,
+      iconName: 'Shield' as const,
     },
     {
       label: 'Подразделение',
       value: fallData.military_unit,
-      icon: AwardIcon,
+      iconName: 'AwardIcon' as const,
     },
     {
       label: 'Позывной',
       value: (fallData as any).call_sign,
-      icon: Flame,
+      iconName: 'Flame' as const,
     },
     {
       label: 'Дата рождения',
       value: safeFormatDate(fallData.birth_date),
-      icon: CalendarDays,
+      iconName: 'CalendarDays' as const,
     },
     {
       label: 'Дата гибели',
       value: safeFormatDate(fallData.death_date),
-      icon: CalendarDays,
+      iconName: 'CalendarDays' as const,
     },
     {
       label: 'Родной город',
       value: fallData.hometown,
-      icon: MapPin,
+      iconName: 'MapPin' as const,
     },
     {
       label: 'Место захоронения',
       value: fallData.burial_location,
-      icon: MapPin,
+      iconName: 'MapPin' as const,
     },
     {
       label: 'Дата добавления',
       value: safeFormatDate(fallData.created_at),
-      icon: CalendarDays,
+      iconName: 'CalendarDays' as const,
     },
   ].filter((item) => Boolean(item.value && `${item.value}`.trim().length > 0))
 
   return (
     <div className="container space-y-12 py-10 md:space-y-16 md:py-16">
-      {ownerData && (
-        <ModeratorsSection
+
+
+      <section>
+        <HeroProfileCard
+          heroPhotoUrl={fallData.hero_photo_url}
+          fullName={fullName}
+          firstName={fallData.first_name}
+          lastName={fallData.last_name}
+          lifespan={lifespan}
+          canEdit={canEditFields}
           fallenId={id}
-          owner={ownerData}
-          editors={editorsData || []}
-          currentUserId={currentUser?.id || null}
-          currentUserRole={currentUserData?.role || 'guest'}
+          candleCount={candleCount}
+          candleLit={currentUserLitCandle}
+          totalFlowers={totalFlowers}
+          isDemo={fallData.is_demo}
+          profileDetails={profileDetails}
+          birthDate={fallData.birth_date}
+          deathDate={fallData.death_date}
+          rank={fallData.rank}
+          unit={fallData.military_unit}
         />
-      )}
+      </section>
 
-      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/80 px-6 py-8 shadow-soft transition-colors md:px-12 md:py-12">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-80 mix-blend-soft-light"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 10% 10%, hsla(var(--glow), 0.3), transparent 40%), radial-gradient(circle at 80% 0%, hsla(var(--primary), 0.22), transparent 45%), radial-gradient(circle at 50% 100%, hsla(var(--secondary), 0.2), transparent 60%)',
+      {/* Редактор профиля */}
+      <section>
+        <ProfileEditor
+          fallenId={id}
+          initialData={{
+            first_name: fallData.first_name,
+            last_name: fallData.last_name,
+            middle_name: fallData.middle_name,
+            birth_date: fallData.birth_date,
+            death_date: fallData.death_date,
+            service_type: fallData.service_type,
+            service_start_date: fallData.service_start_date,
+            service_end_date: fallData.service_end_date,
+            rank: fallData.rank,
+            military_unit: fallData.military_unit,
+            vus_id: (fallData as any).vus_id,
+            hometown: fallData.hometown,
+            burial_location: fallData.burial_location,
           }}
+          canEdit={canEditFields}
+          burialCoordinates={(fallData as any).burial_coordinates as { lat: number; lng: number } | undefined}
         />
-
-        <div className="relative grid gap-10 lg:grid-cols-[minmax(0,360px)_1fr] lg:items-start">
-          <div className="space-y-6">
-            <HeroPhotoBlock
-              heroPhotoUrl={fallData.hero_photo_url}
-              fullName={fullName}
-              firstName={fallData.first_name}
-              lastName={fallData.last_name}
-              canEdit={canEditFields}
-              fallenId={id}
-              candleCount={candleCount}
-              candleLit={currentUserLitCandle}
-            />
-
-            {fallData.is_demo && (
-              <Badge
-                variant="secondary"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary/15 text-sm font-medium text-primary"
-              >
-                Демонстрационная карточка
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-8">
-            <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                <Flame className="h-4 w-4 text-primary" />
-                Цифровой мемориал
-              </div>
-              <div className="space-y-2">
-                <h1 className="text-balance font-serif text-4xl font-semibold leading-tight md:text-5xl">
-                  {fullName}
-                </h1>
-                <p className="text-lg text-muted-foreground">{lifespan}</p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                {stats.map((stat) => {
-                  const Icon = stat.icon
-                  return (
-                    <div
-                      key={stat.label}
-                      className="flex items-center gap-3 rounded-2xl border border-border/50 bg-background/60 px-4 py-3 text-sm transition-colors"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {stat.label}
-                        </p>
-                        <p className="text-sm font-medium text-foreground">
-                          {typeof stat.value === 'number' ? stat.value : stat.value || '—'}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <ProfileEditor
-              fallenId={id}
-              initialData={{
-                first_name: fallData.first_name,
-                last_name: fallData.last_name,
-                middle_name: fallData.middle_name,
-                birth_date: fallData.birth_date,
-                death_date: fallData.death_date,
-                service_type: fallData.service_type,
-                service_start_date: fallData.service_start_date,
-                service_end_date: fallData.service_end_date,
-                rank: fallData.rank,
-                military_unit: fallData.military_unit,
-                hometown: fallData.hometown,
-                burial_location: fallData.burial_location,
-                hero_photo_url: fallData.hero_photo_url,
-              }}
-              canEdit={canEditFields}
-            />
-          </div>
-        </div>
       </section>
 
       {/* Секция наград - показываем всегда, чтобы была доступна кнопка добавления */}
@@ -581,6 +577,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
         awards={fallenAwards}
         fallenId={id}
         availableAwards={availableAwards}
+        canEdit={canEditFields}
       />
 
       <MemorialTextSection fallenId={id} memorialText={fallData.memorial_text} />
@@ -617,6 +614,26 @@ export default async function FallenDetailPage({ params }: PageProps) {
         </Card>
       </section>
 
+      {/* Модерация соболезнований (только для владельцев, редакторов и модераторов) */}
+      {canEditFields && pendingCondolencesForOwner.length > 0 && (
+        <section>
+          <CondolenceModeration
+            fallenId={id}
+            pendingCondolences={pendingCondolencesForOwner as any}
+          />
+        </section>
+      )}
+
+      {/* Книга соболезнований */}
+      <section>
+        <CondolenceBook
+          fallenId={id}
+          condolences={visibleCondolences as any}
+          totalCount={approvedCondolences.length}
+          canModerate={canEditFields}
+        />
+      </section>
+
       {/* Модерация связей (только для владельцев, редакторов и модераторов) */}
       {canEditFields && pendingConnections.length > 0 && (
         <section>
@@ -631,6 +648,7 @@ export default async function FallenDetailPage({ params }: PageProps) {
           relatives={relatives as any}
           friends={friends as any}
           fellowSoldiers={fellowSoldiers as any}
+          canEdit={canEditFields}
         />
       </section>
 
@@ -638,6 +656,20 @@ export default async function FallenDetailPage({ params }: PageProps) {
       <section>
         <CandleLightsList lights={candleLights as any} totalCount={candleCount} />
       </section>
+
+      {/* Список возложенных цветов */}
+      <section>
+        <FlowersList flowers={flowers as any} totalCount={totalFlowers} />
+      </section>
+      {ownerData && (
+        <ModeratorsSection
+          fallenId={id}
+          owner={ownerData}
+          editors={editorsData || []}
+          currentUserId={currentUser?.id || null}
+          currentUserRole={currentUserData?.role || 'guest'}
+        />
+      )}
     </div>
   )
 }

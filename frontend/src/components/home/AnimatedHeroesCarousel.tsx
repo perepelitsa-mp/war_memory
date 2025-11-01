@@ -23,7 +23,7 @@ export function AnimatedHeroesCarousel({
   const currentPositionRef = useRef(0)
 
   // Адаптивное количество карточек
-  const adaptiveMaxVisible = isMobile ? 2 : maxVisible
+  const adaptiveMaxVisible = isMobile ? 1 : maxVisible
 
   // Определение мобильного устройства
   useEffect(() => {

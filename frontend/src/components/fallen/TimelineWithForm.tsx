@@ -32,6 +32,7 @@ import { Timeline, ExtendedTimelineItem } from "@/components/fallen/Timeline";
 import { cn } from "@/lib/utils";
 import { useCanDeleteContent } from "@/hooks/useCanDeleteContent";
 import { useConfirmDialog } from "@/components/ui/alert-dialog-custom";
+import { compressImage } from "@/lib/imageCompression";
 
 const MAX_WORDS = 500;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -136,6 +137,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState(false);
 
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timelineBlockRef = useRef<HTMLDivElement>(null);
@@ -162,7 +164,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
     }));
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file =
       event.target.files && event.target.files.length > 0 ? event.target.files[0] : null;
     event.target.value = "";
@@ -197,8 +199,14 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      setError("Размер изображения не должен превышать 5 МБ.");
+    // Сжимаем изображение перед созданием превью
+    setCompressing(true);
+    let compressedFile: File;
+    try {
+      compressedFile = await compressImage(file, { imageType: 'timeline' });
+    } catch (error) {
+      console.error('Error compressing timeline image:', error);
+      setError("Не удалось подготовить изображение. Попробуйте другой файл.");
       setPreviewUrl(
         editingItem
           ? editingItem.local_image_preview || editingItem.media?.file_url || null
@@ -206,13 +214,16 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
       );
       setPreviewIsObjectUrl(false);
       setForm((prev) => ({ ...prev, file: null }));
+      setCompressing(false);
       return;
+    } finally {
+      setCompressing(false);
     }
 
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(compressedFile);
     setPreviewUrl(objectUrl);
     setPreviewIsObjectUrl(true);
-    setForm((prev) => ({ ...prev, file }));
+    setForm((prev) => ({ ...prev, file: compressedFile }));
     setRemoveExistingMedia(true);
     setError(null);
   };
@@ -401,6 +412,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
             ? deleteError.message
             : "Не удалось удалить событие. Попробуйте позже.",
         confirmText: "Закрыть",
+        variant: "error",
       });
     } finally {
       setDeletingId(null);
@@ -769,29 +781,30 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
         }}
       >
         <DialogContent className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-border/40 bg-background/95 p-0">
-          <DialogHeader className="space-y-2 border-b border-border/40 px-6 py-6">
-            <DialogTitle className="text-xl font-semibold text-foreground">
+          <DialogHeader className="space-y-1.5 border-b border-border/40 px-4 py-4 sm:space-y-2 sm:px-6 sm:py-6">
+            <DialogTitle className="text-lg font-semibold text-foreground sm:text-xl">
               {editingItem ? "Редактировать событие" : "Новая запись в хронике"}
             </DialogTitle>
-            <DialogDescription className="text-sm text-foreground/70">
+            <DialogDescription className="text-xs leading-relaxed text-foreground/70 sm:text-sm">
               Опишите событие так, чтобы читатель ощутил атмосферу момента. Добавьте точную дату и
               фотографии, если они есть.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 px-6 pb-6 pt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
+          <form onSubmit={handleSubmit} className="space-y-4 px-4 pb-4 pt-3 sm:space-y-6 sm:px-6 sm:pb-6 sm:pt-4">
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground sm:gap-2 sm:text-sm">
                 Дата события (если известна)
                 <Input
                   type="date"
                   value={form.date}
                   max={new Date().toISOString().slice(0, 10)}
                   onChange={(event) => handleFieldChange("date", event.target.value)}
+                  className="h-9 sm:h-10"
                 />
               </label>
 
-              <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground sm:gap-2 sm:text-sm">
                 Заголовок
                 <Input
                   type="text"
@@ -801,17 +814,18 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                   value={form.title}
                   onChange={(event) => handleFieldChange("title", event.target.value)}
                   placeholder="Например: Первые шаги в музыке"
+                  className="h-9 sm:h-10"
                 />
               </label>
             </div>
 
-            <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
+            <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground sm:gap-2 sm:text-sm">
               Подробности события
               <Textarea
                 required
                 minLength={20}
                 className={cn(
-                  "min-h-[160px] rounded-2xl border border-border/60 bg-background px-3 py-3 text-sm leading-relaxed text-foreground shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40",
+                  "min-h-[140px] rounded-2xl border border-border/60 bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 sm:min-h-[160px] sm:py-3",
                   isWordLimitExceeded && "border-destructive/60 focus:ring-destructive/40",
                 )}
                 value={form.description}
@@ -820,7 +834,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
               />
               <span
                 className={cn(
-                  "text-xs text-muted-foreground",
+                  "text-[11px] text-muted-foreground sm:text-xs",
                   isWordLimitExceeded && "text-destructive",
                 )}
               >
@@ -828,38 +842,50 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
               </span>
             </label>
 
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-                Фотография (до 5 МБ)
-                <div className="relative flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 bg-background/60 px-4 py-6 text-center transition hover:border-primary/60">
-                  <Upload className="h-6 w-6 text-primary" />
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <p>Перетащите файл сюда или выберите на устройстве.</p>
-                    <p>Поддерживаемые форматы: JPG, PNG, WEBP.</p>
-                  </div>
+            <div className="flex flex-col gap-2.5 sm:gap-3">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground sm:gap-2 sm:text-sm">
+                Фотография
+                <div className={cn(
+                  "relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 bg-background/60 px-3 py-4 text-center transition hover:border-primary/60 sm:gap-3 sm:px-4 sm:py-6",
+                  compressing && "pointer-events-none opacity-50"
+                )}>
+                  {compressing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 text-primary animate-spin sm:h-6 sm:w-6" />
+                      <p className="text-[11px] text-muted-foreground sm:text-xs">Загрузка изображения...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
+                      <p className="text-[11px] text-muted-foreground sm:text-xs">
+                        Перетащите файл сюда или выберите на устройстве
+                      </p>
+                    </>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                     onChange={handleFileChange}
+                    disabled={compressing}
                   />
                 </div>
               </label>
 
               {(previewUrl || (editingItem && removeExistingMedia)) && (
-                <div className="space-y-2">
+                <div className="space-y-1.5 sm:space-y-2">
                   {previewUrl && (
                     <div className="overflow-hidden rounded-2xl border border-border/60 bg-background-soft">
                       <img
                         src={previewUrl}
                         alt="Предпросмотр выбранной фотографии"
-                        className="h-full w-full max-h-72 object-cover"
+                        className="h-full w-full max-h-[200px] object-contain sm:max-h-72"
                       />
                     </div>
                   )}
 
                   {editingItem && (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/70">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-foreground/70 sm:gap-2 sm:text-xs">
                       {form.file ? (
                         <>
                           <span>Выбрано новое фото. Текущее будет заменено.</span>
@@ -867,7 +893,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-xs"
+                            className="h-6 px-1.5 text-[11px] sm:h-7 sm:px-2 sm:text-xs"
                             onClick={restoreExistingMedia}
                           >
                             Отменить замену
@@ -880,7 +906,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-xs"
+                            className="h-6 px-1.5 text-[11px] sm:h-7 sm:px-2 sm:text-xs"
                             onClick={restoreExistingMedia}
                           >
                             Вернуть фото
@@ -891,7 +917,7 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-xs"
+                          className="h-6 px-1.5 text-[11px] sm:h-7 sm:px-2 sm:text-xs"
                           onClick={removeMediaCompletely}
                         >
                           Удалить фото
@@ -904,24 +930,24 @@ export function TimelineWithForm({ items, fallenId, className }: TimelineWithFor
             </div>
 
             {error && (
-              <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-xs text-destructive sm:px-4 sm:py-3 sm:text-sm">
                 {error}
               </div>
             )}
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={closeDialog}
-                className="sm:min-w-[140px]"
+                className="h-9 text-sm sm:h-10 sm:min-w-[140px]"
               >
                 Отменить
               </Button>
               <Button
                 type="submit"
-                className="sm:min-w-[180px]"
-                disabled={isSubmitting || isWordLimitExceeded}
+                className="h-9 text-sm sm:h-10 sm:min-w-[180px]"
+                disabled={isSubmitting || isWordLimitExceeded || compressing}
               >
                 {isSubmitting
                   ? "Сохраняем..."

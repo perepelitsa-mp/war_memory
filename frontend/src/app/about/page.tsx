@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Flame, HeartHandshake, MapPin, PenSquare, Share2, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const missionHighlights = [
   {
@@ -87,21 +88,25 @@ const team = [
     name: "Максим Перепелица",
     role: "Основатель и разработчик проекта",
     bio: "Разрабатывает всю архитектуру сайта и следит за тем, чтобы платформа была надёжной и удобной для семей.",
+    avatar: "/images/IMG_7328-corp.webp",
   },
   {
     name: "Игорь Смирнов",
     role: "Главный администратор",
     bio: "Координирует работу с семьями, помогает оформлять истории и отвечает на вопросы участников сообщества.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Igor&backgroundColor=ff7f00,f4b95a",
   },
   {
     name: "Людмила Орлова",
     role: "Модератор историй",
     bio: "Проверяет рассказы на соответствие стандартам, помогает сохранять уважительный и тёплый тон в публикациях.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ludmila&backgroundColor=ff7f00,f4b95a",
   },
   {
     name: "Сергей Власов",
     role: "Ведущий разработчик",
     bio: "Заботится о технической стороне сайта, чтобы истории близких людей надёжно хранились и были доступны семье.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sergey&backgroundColor=ff7f00,f4b95a",
   },
 ]
 
@@ -109,32 +114,32 @@ export default function AboutPage() {
   return (
     <div className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_hsl(var(--glow)/0.28),_transparent_55%),radial-gradient(circle_at_bottom_right,_hsl(var(--primary)/0.22),_transparent_50%)]" />
-      <div className="container space-y-16 py-16 md:space-y-20 md:py-24">
+      <div className="container space-y-8 py-8 sm:space-y-12 sm:py-12 md:space-y-16 md:py-16 lg:space-y-20 lg:py-24">
         {/* Hero */}
-        <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-surface/80 px-6 py-12 shadow-soft md:px-12">
+        <section className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface/80 px-4 py-8 shadow-soft sm:rounded-3xl sm:px-6 sm:py-10 md:px-8 md:py-12 lg:px-12">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,_hsl(var(--primary)/0.25),_transparent_45%),radial-gradient(circle_at_80%_0%,_hsl(var(--glow)/0.2),_transparent_45%),radial-gradient(circle_at_60%_100%,_rgba(26,26,26,0.25),_transparent_60%)] opacity-80 mix-blend-soft-light" />
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
-            <div className="space-y-6 text-balance">
-              <p className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/15 px-4 py-1 text-xs font-medium uppercase tracking-[0.35em] text-primary">
+          <div className="grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-10">
+            <div className="space-y-4 text-balance sm:space-y-5 md:space-y-6">
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-0.5 text-[10px] font-medium uppercase tracking-[0.3em] text-primary sm:gap-2 sm:px-4 sm:py-1 sm:text-xs">
                 Платформа памяти
               </p>
-              <div className="space-y-4">
-                <h1 className="font-serif text-4xl font-semibold leading-tight text-foreground md:text-5xl">
+              <div className="space-y-3 sm:space-y-4">
+                <h1 className="font-serif text-2xl font-semibold leading-tight text-foreground sm:text-3xl md:text-4xl lg:text-5xl">
                   Цифровой мемориал в честь героев СВО
                 </h1>
-                <p className="text-lg text-foreground/75 md:text-xl">
+                <p className="text-sm leading-relaxed text-foreground/75 sm:text-base md:text-lg lg:text-xl">
                   Мы объединяем рассказы родных и друзей, чтобы каждый мог рассказать о своём герое, сохранить тёплые слова,
                   фотографии и места памяти.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button size="lg" className="gap-2" asChild>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                <Button size="sm" className="h-9 gap-1.5 text-sm sm:h-10 sm:gap-2 sm:text-base lg:h-11" asChild>
                   <Link href="/fallen/create">Создать карточку памяти</Link>
                 </Button>
                 <Button
-                  size="lg"
+                  size="sm"
                   variant="outline"
-                  className="border-border/60 text-foreground/80 hover:bg-background/60"
+                  className="h-9 border-border/60 text-sm text-foreground/80 hover:bg-background/60 sm:h-10 sm:text-base lg:h-11"
                   asChild
                 >
                   <Link href="/map">Просмотреть карту памяти</Link>
@@ -142,9 +147,9 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/20 via-transparent to-background shadow-glow">
+            <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-primary/20 via-transparent to-background shadow-glow sm:rounded-3xl">
               <div className="aspect-[4/3] w-full bg-[radial-gradient(circle_at_20%_20%,_rgba(255,127,0,0.35),_transparent_55%),radial-gradient(circle_at_70%_30%,_rgba(244,185,90,0.28),_transparent_50%),radial-gradient(circle_at_80%_90%,_rgba(17,28,40,0.4),_transparent_60%)]" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/40 to-transparent px-6 pb-6 pt-12 text-sm text-foreground/70">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/40 to-transparent px-3 pb-3 pt-8 text-xs text-foreground/70 sm:px-4 sm:pb-4 sm:pt-10 sm:text-sm md:px-6 md:pb-6 md:pt-12">
                 «Память — мост между поколениями. Мы строим его вместе» — сообщество мемориала
               </div>
             </div>
@@ -152,29 +157,29 @@ export default function AboutPage() {
         </section>
 
         {/* Mission */}
-        <section className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_1.2fr]">
-          <div className="space-y-6">
-            <h2 className="font-serif text-3xl font-semibold text-foreground md:text-4xl">Для чего создан проект</h2>
-            <p className="text-lg leading-relaxed text-foreground/75">
+        <section className="grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,0.8fr)_1.2fr] lg:gap-10">
+          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+            <h2 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">Для чего создан проект</h2>
+            <p className="text-sm leading-relaxed text-foreground/75 sm:text-base md:text-lg">
               «Память героев» — это место, где близкие могут рассказать о тех, кого больше нет рядом. Здесь делятся тем, что
               обычно хранится в семейных альбомах: любимыми историями, радостными моментами и словами поддержки.
             </p>
-            <p className="text-lg leading-relaxed text-foreground/75">
+            <p className="text-sm leading-relaxed text-foreground/75 sm:text-base md:text-lg">
               Мы помогаем сохранить память простым и ясным языком: подскажем, как оформить рассказ, как добавить фото и
               отметить важные места. Проект живёт благодаря людям, которые делятся своей болью и любовью.
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 md:gap-6">
             {missionHighlights.map((item) => (
               <div
                 key={item.title}
-                className="relative overflow-hidden rounded-3xl border border-border/50 bg-background/70 p-6 shadow-soft"
+                className="relative overflow-hidden rounded-2xl border border-border/50 bg-background/70 p-4 shadow-soft sm:rounded-3xl sm:p-5 md:p-6"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-glow/10 opacity-60" />
-                <div className="relative space-y-3">
-                  <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
-                  <p className="text-sm text-foreground/70">{item.description}</p>
+                <div className="relative space-y-2 sm:space-y-2.5 md:space-y-3">
+                  <h3 className="text-base font-semibold text-foreground sm:text-lg">{item.title}</h3>
+                  <p className="text-xs leading-relaxed text-foreground/70 sm:text-sm">{item.description}</p>
                 </div>
               </div>
             ))}
@@ -182,30 +187,30 @@ export default function AboutPage() {
         </section>
 
         {/* Opportunities */}
-        <section className="space-y-10">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3">
-              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Что вы можете сделать</p>
-              <h2 className="font-serif text-3xl font-semibold text-foreground md:text-4xl">Пути участия</h2>
+        <section className="space-y-6 sm:space-y-8 md:space-y-10">
+          <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-2 sm:space-y-3">
+              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground sm:text-sm">Что вы можете сделать</p>
+              <h2 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">Пути участия</h2>
             </div>
-            <Link href="/fallen/create" className="text-sm font-medium text-primary hover:text-primary/80">
+            <Link href="/fallen/create" className="text-xs font-medium text-primary hover:text-primary/80 sm:text-sm">
               Присоединиться к сообществу
             </Link>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
             {opportunities.map((item) => {
               const Icon = item.icon
               return (
                 <div
                   key={item.title}
-                  className="group relative overflow-hidden rounded-3xl border border-border/50 bg-background/70 p-6 shadow-soft transition hover:-translate-y-1 hover:border-primary/40"
+                  className="group relative overflow-hidden rounded-2xl border border-border/50 bg-background/70 p-4 shadow-soft transition hover:-translate-y-1 hover:border-primary/40 sm:rounded-3xl sm:p-5 md:p-6"
                 >
-                  <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                    <Icon className="h-5 w-5" />
+                  <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground sm:mb-4 sm:h-12 sm:w-12 sm:rounded-2xl">
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </span>
-                  <h3 className="mb-2 text-lg font-semibold text-foreground">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-foreground/70">{item.description}</p>
+                  <h3 className="mb-1.5 text-base font-semibold text-foreground sm:mb-2 sm:text-lg">{item.title}</h3>
+                  <p className="text-xs leading-relaxed text-foreground/70 sm:text-sm">{item.description}</p>
                 </div>
               )
             })}
@@ -240,47 +245,72 @@ export default function AboutPage() {
         </section> */}
 
         {/* Team */}
-        <section className="space-y-8">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <section className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col gap-2.5 sm:gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Люди проекта</p>
-              <h2 className="font-serif text-3xl font-semibold text-foreground md:text-4xl">Команда мемориала</h2>
+              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground sm:text-sm">Люди проекта</p>
+              <h2 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">Команда мемориала</h2>
             </div>
-            <p className="max-w-xl text-sm text-foreground/65">
+            <p className="max-w-xl text-xs leading-relaxed text-foreground/65 sm:text-sm">
               Нас объединяют желание поддержать семьи и вера в то, что рассказы о героях должны звучать громче и теплее.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {team.map((member) => (
-              <div
-                key={member.name}
-                className="rounded-3xl border border-border/50 bg-background/70 p-6 shadow-soft transition hover:-translate-y-1 hover:border-primary/40"
-              >
-                <h3 className="text-lg font-semibold text-foreground">{member.name}</h3>
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary/80">{member.role}</p>
-                <p className="mt-3 text-sm leading-relaxed text-foreground/70">{member.bio}</p>
-              </div>
-            ))}
+          <div className="grid gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
+            {team.map((member) => {
+              const getInitials = (name: string) => {
+                const parts = name.trim().split(' ')
+                if (parts.length >= 2) {
+                  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+                }
+                return name.slice(0, 2).toUpperCase()
+              }
+
+              return (
+                <div
+                  key={member.name}
+                  className="rounded-2xl border border-border/50 bg-background/70 p-4 shadow-soft transition hover:-translate-y-1 hover:border-primary/40 sm:rounded-3xl sm:p-5 md:p-6"
+                >
+                  {/* Avatar */}
+                  <div className="mb-3 flex justify-center sm:mb-4">
+                    <Avatar className="h-16 w-16 border-2 border-primary/20 sm:h-20 sm:w-20">
+                      <AvatarImage src={member.avatar} alt={member.name} />
+                      <AvatarFallback className="bg-primary/10 text-base font-semibold text-primary sm:text-lg">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+
+                  {/* Name and Role */}
+                  <div className="text-center">
+                    <h3 className="text-base font-semibold text-foreground sm:text-lg">{member.name}</h3>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-primary/80 sm:text-xs">{member.role}</p>
+                  </div>
+
+                  {/* Bio */}
+                  <p className="mt-2.5 text-center text-xs leading-relaxed text-foreground/70 sm:mt-3 sm:text-sm">{member.bio}</p>
+                </div>
+              )
+            })}
           </div>
         </section>
 
         {/* CTA */}
-        <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-surface/80 p-10 shadow-glow text-center">
+        <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-surface/80 p-6 text-center shadow-glow sm:rounded-3xl sm:p-8 md:p-10">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_hsl(var(--primary)/0.25),_transparent_40%),radial-gradient(circle_at_80%_20%,_hsl(var(--glow)/0.2),_transparent_45%)] blur-2xl" />
-          <div className="relative space-y-4">
-            <h2 className="font-serif text-3xl font-semibold text-foreground md:text-4xl">Присоединяйтесь к хранителям памяти</h2>
-            <p className="mx-auto max-w-2xl text-sm text-foreground/70">
+          <div className="relative space-y-3 sm:space-y-4">
+            <h2 className="font-serif text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">Присоединяйтесь к хранителям памяти</h2>
+            <p className="mx-auto max-w-2xl text-xs leading-relaxed text-foreground/70 sm:text-sm">
               Расскажите о своём герое, поддержите других и помогите сохранить память о людях, которые для нас — больше чем
               строки в учебниках. Вместе мы делаем историю человечной.
             </p>
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button size="lg" className="gap-2" asChild>
+            <div className="flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3">
+              <Button size="sm" className="h-9 w-full gap-1.5 text-sm sm:h-10 sm:w-auto sm:gap-2 sm:text-base lg:h-11" asChild>
                 <Link href="/register">Стать участником проекта</Link>
               </Button>
               <Button
-                size="lg"
+                size="sm"
                 variant="outline"
-                className="border-border/60 text-foreground/80 hover:bg-background/60"
+                className="h-9 w-full border-border/60 text-sm text-foreground/80 hover:bg-background/60 sm:h-10 sm:w-auto sm:text-base lg:h-11"
                 asChild
               >
                 <Link href="/contact">Связаться с командой</Link>

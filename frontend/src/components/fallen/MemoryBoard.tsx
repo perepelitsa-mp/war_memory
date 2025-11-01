@@ -546,7 +546,7 @@ export function MemoryBoard({ memories, fallenId, className }: MemoryBoardProps)
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] w-[90vw] max-w-none overflow-y-auto border border-border/40 bg-background p-0 sm:max-w-[90vw] md:max-w-[90vw] lg:max-w-[90vw]">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border border-border/40 bg-background p-0">
           {viewMemory && (
             <MemoryCard
               memory={viewMemory}

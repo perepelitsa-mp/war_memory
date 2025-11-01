@@ -205,6 +205,7 @@ export default function EditFallenPage({ params }: { params: { id: string } }) {
 
         {showProfileEdit && (
           <EditHeroProfile
+            fallenId={fallen.id}
             initialData={{
               first_name: fallen.first_name,
               last_name: fallen.last_name,

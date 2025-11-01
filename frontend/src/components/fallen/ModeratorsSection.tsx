@@ -94,6 +94,7 @@ export function ModeratorsSection({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Произошла ошибка',
         confirmText: 'Закрыть',
+        variant: 'error',
       })
     } finally {
       setRemovingId(null)
